@@ -1,0 +1,32 @@
+import {getUsers, handleAddUser} from "@/lib/actions";
+import UserCard from "@/components/UserCard";
+
+export default async function Home() {
+    const users = await getUsers();
+
+    return (
+        <div>
+            <div>
+                <h1>Users</h1>
+                    {users.map((user: any) => (
+                        <UserCard key={user._id} user={user} />
+                    ))}
+            </div>
+            <div>
+                <h1>add User</h1>
+                <form action={handleAddUser}>
+                    <input name="userName" placeholder="Username" required />
+                    <input name="password" placeholder="Password" type="password" required />
+                    <input name="firstName" placeholder="First Name" required />
+                    <input name="lastName" placeholder="Last Name" required />
+                    <input name="email" placeholder="Email" type="email" required />
+                    <select id="role" name="role">
+                        <option value="Administrator">Administrator</option>
+                        <option value="Developer">Developer</option>
+                    </select>
+                    <button type="submit">Submit</button>
+                </form>
+            </div>
+        </div>
+    );
+}
