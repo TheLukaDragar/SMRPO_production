@@ -22,8 +22,6 @@ export async function connectToDatabase(): Promise<MongoDBConnection> {
     const client = new MongoClient(uri);
     await client.connect();
 
-    //const db = client.db(dbName);
-
     cachedClient = client;
     cachedDb = client;
 
@@ -31,4 +29,4 @@ export async function connectToDatabase(): Promise<MongoDBConnection> {
         client,
         db: (name = dbName) => client.db(name),
     };
-}
+} 

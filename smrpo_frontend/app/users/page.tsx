@@ -1,14 +1,14 @@
-import {getUsers, handleAddUser} from "@/lib/actions";
+import {getUsers, handleAddUser, User} from "@/lib/actions/user-actions";
 import UserCard from "@/components/UserCard";
 
 export default async function Home() {
-    const users = await getUsers();
+    const users: User[] = await getUsers();
 
     return (
         <div>
             <div>
                 <h1>Users</h1>
-                    {users.map((user: any) => (
+                    {users.map((user: User) => (
                         <UserCard key={user._id} user={user} />
                     ))}
             </div>

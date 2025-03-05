@@ -1,16 +1,9 @@
 'use client';
 
 import React from 'react';
-
+import { User } from '@/lib/actions/user-actions';
 interface UserCardProps {
-    user: {
-        userName: string;
-        firstName: string;
-        lastName: string;
-        email: string;
-        role: string;
-        createdAt?: Date;
-    };
+    user: User;
     onEdit?: (userId: number) => void;
     onDelete?: (userId: number) => void;
 }
@@ -21,11 +14,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
     const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 
     const formattedDate = createdAt
-        ? new Date(createdAt).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        })
+        ? new Date(createdAt).toISOString().split('T')[0].replace(/-/g, '/')
         : '';
 
     const getRoleBadgeColor = (role: string) => {
