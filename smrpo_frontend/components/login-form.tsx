@@ -1,24 +1,99 @@
+'use client';
+
+import { useRouter, useSearchParams } from 'next/navigation';
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { login } from "@/lib/actions/auth-actions"
+import { useState, useEffect } from "react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ErrorResponse } from "@/lib/utils/error-handling"
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [error, setError] = useState<ErrorResponse['error'] | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const getFieldError = (fieldName: string) => {
+    if (!error?.validationErrors) return null;
+    const fieldError = error.validationErrors.find(err => err.field === fieldName);
+    return fieldError?.message;
+  };
+
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
+      setSuccess('Registration successful! Please log in with your credentials.');
+    }
+  }, [searchParams]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setIsLoading(true);
+
+    try {
+      const formData = new FormData(event.currentTarget);
+      const result = await login(formData);
+
+      if ('error' in result) {
+        const errorResponse = result as ErrorResponse;
+        setError(errorResponse.error);
+      } else {
+        // Redirect to the original destination or dashboard
+        const from = searchParams.get('from') || '/dashboard';
+        router.push(from);
+        router.refresh();
+      }
+    } catch (err) {
+      setError({
+        message: 'An unexpected error occurred. Please try again.',
+        type: 'UnknownError',
+        statusCode: 500
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
-    <form className={cn("flex flex-col gap-6", className)} {...props}>
+    <form onSubmit={handleSubmit} className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-bold">Login to your account</h1>
         <p className="text-muted-foreground text-sm text-balance">
-          Enter your email below to login to your account
+          Enter your email or username below to login to your account
         </p>
       </div>
+      {error && !error.validationErrors && (
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )}
+      {success && (
+        <Alert variant="default" className="border-green-500 bg-green-50 text-green-700">
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
       <div className="grid gap-6">
         <div className="grid gap-3">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="m@example.com" required />
+          <Label htmlFor="emailOrUsername">Email or Username</Label>
+          <Input 
+            id="emailOrUsername" 
+            name="emailOrUsername" 
+            type="text" 
+            placeholder="Email or username" 
+            required 
+            disabled={isLoading}
+          />
+          {getFieldError('emailOrUsername') && (
+            <p className="text-sm text-destructive">{getFieldError('emailOrUsername')}</p>
+          )}
         </div>
         <div className="grid gap-3">
           <div className="flex items-center">
@@ -30,10 +105,19 @@ export function LoginForm({
               Forgot your password?
             </a>
           </div>
-          <Input id="password" type="password" required />
+          <Input 
+            id="password" 
+            name="password" 
+            type="password" 
+            required 
+            disabled={isLoading}
+          />
+          {getFieldError('password') && (
+            <p className="text-sm text-destructive">{getFieldError('password')}</p>
+          )}
         </div>
-        <Button type="submit" className="w-full">
-          Login
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? "Logging in..." : "Login"}
         </Button>
         <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
           <span className="bg-background text-muted-foreground relative z-10 px-2">
@@ -52,7 +136,7 @@ export function LoginForm({
       </div>
       <div className="text-center text-sm">
         Don&apos;t have an account?{" "}
-        <a href="#" className="underline underline-offset-4">
+        <a href="/register" className="underline underline-offset-4">
           Sign up
         </a>
       </div>

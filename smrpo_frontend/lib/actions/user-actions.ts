@@ -3,18 +3,8 @@
 import { connectToDatabase } from "@/lib/db/connection";
 import { revalidatePath } from 'next/cache';
 import { genSalt, hash } from "bcrypt-ts";
+import { User } from "../types/user-types";
 
-// Type for User document
-export interface User {
-    _id: string;
-    userName: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    role: string;
-    createdAt: Date;
-}
 
 // Get all users
 export async function getUsers() {
@@ -79,4 +69,18 @@ export async function deleteUser(id: string) {
     
     revalidatePath('/users');
     return result;
+}
+
+// Search users by username
+export async function searchUsers(query: string) {
+    const { db } = await connectToDatabase();
+    const users = await db().collection('users')
+        .find({ 
+            userName: { 
+                $regex: new RegExp(query, 'i') 
+            }
+        })
+        .limit(5)
+        .toArray();
+    return JSON.parse(JSON.stringify(users));
 } 

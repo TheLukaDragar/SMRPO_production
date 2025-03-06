@@ -15,9 +15,10 @@ import {
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
+import { NavBoards } from "@/components/nav-boards"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { ProjectSwitcher } from "@/components/project-switcher"
+import { User } from "@/lib/types/user-types"
 import {
   Sidebar,
   SidebarContent,
@@ -26,43 +27,25 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-// This is sample data.
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  user: User
+}
+
+// Navigation data
+const navData = {
   navMain: [
     {
-      title: "Playground",
+      title: "Dashboard",
       url: "#",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
-          title: "History",
+          title: "Overview",
           url: "#",
         },
         {
-          title: "Starred",
+          title: "Analytics",
           url: "#",
         },
         {
@@ -72,20 +55,20 @@ const data = {
       ],
     },
     {
-      title: "Models",
+      title: "Sprint Planning",
       url: "#",
       icon: Bot,
       items: [
         {
-          title: "Genesis",
+          title: "Current Sprint",
           url: "#",
         },
         {
-          title: "Explorer",
+          title: "Backlog",
           url: "#",
         },
         {
-          title: "Quantum",
+          title: "Planning",
           url: "#",
         },
       ],
@@ -96,19 +79,15 @@ const data = {
       icon: BookOpen,
       items: [
         {
-          title: "Introduction",
+          title: "Project Wiki",
           url: "#",
         },
         {
-          title: "Get Started",
+          title: "Guidelines",
           url: "#",
         },
         {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
+          title: "API Docs",
           url: "#",
         },
       ],
@@ -119,55 +98,51 @@ const data = {
       icon: Settings2,
       items: [
         {
-          title: "General",
+          title: "Project Settings",
           url: "#",
         },
         {
-          title: "Team",
+          title: "Team Members",
           url: "#",
         },
         {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
+          title: "Permissions",
           url: "#",
         },
       ],
     },
   ],
-  projects: [
+  boards: [
     {
-      name: "Design Engineering",
+      name: "Sprint Board",
       url: "#",
       icon: Frame,
     },
     {
-      name: "Sales & Marketing",
+      name: "Backlog Board",
       url: "#",
       icon: PieChart,
     },
     {
-      name: "Travel",
+      name: "Roadmap",
       url: "#",
       icon: Map,
     },
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <ProjectSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavMain items={navData.navMain} />
+        <NavBoards boards={navData.boards} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

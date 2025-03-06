@@ -1,4 +1,5 @@
-import {getUsers, handleAddUser, User} from "@/lib/actions/user-actions";
+import {getUsers, handleAddUser} from "@/lib/actions/user-actions";
+import { User } from "@/lib/types/user-types";
 import UserCard from "@/components/UserCard";
 
 export default async function Home() {
