@@ -72,9 +72,19 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
     ? (newOpen: boolean) => externalOnOpenChange?.(newOpen) 
     : setInternalOpen;
 
+  // Load initial users when component mounts
+  useEffect(() => {
+    const loadUsers = async () => {
+      const results = await searchUsers(" ")
+      setUsers(results)
+    }
+    loadUsers()
+  }, [])
+
+  // Handle search updates
   useEffect(() => {
     const searchUsersDebounced = setTimeout(async () => {
-      if (searchQuery.length >= 1) {
+      if (searchQuery) {
         const results = await searchUsers(searchQuery)
         setUsers(results)
       }
@@ -154,7 +164,7 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create New Project</DialogTitle>

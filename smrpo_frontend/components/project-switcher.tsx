@@ -3,7 +3,7 @@
 import * as React from "react"
 import { ChevronsUpDown, Plus, Loader2 } from "lucide-react"
 import { Project } from "@/lib/types/project-types"
-import { getProjects } from "@/lib/actions/project-actions"
+import { useProject } from "@/lib/contexts/project-context"
 import { ProjectFormDialog } from "@/components/project-form-dialog"
 
 import {
@@ -21,35 +21,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
 
 export function ProjectSwitcher() {
   const { isMobile } = useSidebar()
-  const [projects, setProjects] = React.useState<Project[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
-  const [activeProject, setActiveProject] = React.useState<Project | null>(null)
+  const { activeProject, setActiveProject, projects, loading, error, refreshProjects } = useProject()
   const [projectFormOpen, setProjectFormOpen] = React.useState(false)
-
-  React.useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await getProjects()
-        if ('error' in response) {
-          setError(response.error.message)
-        } else {
-          setProjects(response)
-          setActiveProject(response[0] || null)
-        }
-      } catch (error) {
-        setError('Failed to fetch projects')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchProjects()
-  }, [projectFormOpen]) // Refetch projects when the form dialog closes
 
   if (loading) {
     return (
@@ -110,7 +86,6 @@ export function ProjectSwitcher() {
                 className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  {/* Default icon for all projects */}
                   <ChevronsUpDown className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
@@ -157,10 +132,14 @@ export function ProjectSwitcher() {
         </SidebarMenuItem>
       </SidebarMenu>
 
-      {/* Project form dialog with external control */}
       <ProjectFormDialog 
         open={projectFormOpen}
-        onOpenChange={setProjectFormOpen}
+        onOpenChange={(open) => {
+          setProjectFormOpen(open)
+          if (!open) {
+            refreshProjects()
+          }
+        }}
       />
     </>
   )

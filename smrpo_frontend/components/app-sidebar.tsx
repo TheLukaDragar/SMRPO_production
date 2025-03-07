@@ -36,78 +36,78 @@ const navData = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
           title: "Overview",
-          url: "#",
+          url: "/dashboard",
         },
         {
           title: "Analytics",
-          url: "#",
+          url: "/dashboard/analytics",
         },
         {
           title: "Settings",
-          url: "#",
+          url: "/dashboard/settings",
         },
       ],
     },
     {
       title: "Sprint Planning",
-      url: "#",
+      url: "/dashboard/sprints",
       icon: Bot,
       items: [
         {
           title: "Current Sprint",
-          url: "#",
+          url: "/dashboard/sprints/current",
         },
         {
           title: "Backlog",
-          url: "#",
+          url: "/dashboard/sprints/backlog",
         },
         {
           title: "Planning",
-          url: "#",
+          url: "/dashboard/sprints/planning",
         },
       ],
     },
     {
       title: "Documentation",
-      url: "#",
+      url: "/dashboard/docs",
       icon: BookOpen,
       items: [
         {
           title: "Project Wiki",
-          url: "#",
+          url: "/dashboard/docs/wiki",
         },
         {
           title: "Guidelines",
-          url: "#",
+          url: "/dashboard/docs/guidelines",
         },
         {
           title: "API Docs",
-          url: "#",
+          url: "/dashboard/docs/api",
         },
       ],
     },
     {
       title: "Settings",
-      url: "#",
+      url: "/dashboard/settings",
       icon: Settings2,
       items: [
         {
           title: "Project Settings",
-          url: "#",
+          url: "/dashboard/settings/project",
         },
         {
           title: "Team Members",
-          url: "#",
+          url: "/dashboard/settings/team",
         },
         {
           title: "Permissions",
-          url: "#",
+          url: "/dashboard/settings/permissions",
         },
       ],
     },
@@ -115,17 +115,17 @@ const navData = {
   boards: [
     {
       name: "Sprint Board",
-      url: "#",
+      url: "/dashboard/boards/sprint",
       icon: Frame,
     },
     {
       name: "Backlog Board",
-      url: "#",
+      url: "/dashboard/boards/backlog",
       icon: PieChart,
     },
     {
       name: "Roadmap",
-      url: "#",
+      url: "/dashboard/boards/roadmap",
       icon: Map,
     },
   ],
