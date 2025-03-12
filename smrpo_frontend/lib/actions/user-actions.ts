@@ -62,6 +62,56 @@ export async function updateUser(id: string, userData: Partial<User>) {
     return result;
 }
 
+
+// Handle user update form submission
+export async function handleUpdateUser(formData: FormData, userId: string) {
+    const { db } = await connectToDatabase();
+
+    // Retrieve the current user data
+    const currentUser = await getUserById(userId);
+    if (!currentUser) {
+        throw new Error("User not found");
+    }
+
+    // Prepare update data object
+    const updateData: Partial<User> = {};
+
+    // Check and update username (prevent duplicates)
+    const newUserName = formData.get("userName") as string;
+    if (newUserName && newUserName !== currentUser.userName) {
+        const duplicate = await db().collection('users').findOne({ userName: newUserName });
+        if (duplicate) {
+            throw new Error("Username already exists");
+        }
+        updateData.userName = newUserName;
+    }
+
+    // Check and update password if provided
+    const newPassword = formData.get("password") as string;
+    if (newPassword) {
+        const salt = await genSalt(10);
+        updateData.password = await hash(newPassword, salt);
+    }
+
+    // Update other personal details
+    const firstName = formData.get("firstName") as string;
+    if (firstName) {
+        updateData.firstName = firstName;
+    }
+    const lastName = formData.get("lastName") as string;
+    if (lastName) {
+        updateData.lastName = lastName;
+    }
+    const email = formData.get("email") as string;
+    if (email) {
+        updateData.email = email;
+    }
+
+    // Execute the update operation
+    const result = await updateUser(userId, updateData);
+    return result;
+}
+
 // Delete user
 export async function deleteUser(id: string) {
     const { db } = await connectToDatabase();

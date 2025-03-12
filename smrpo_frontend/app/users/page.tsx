@@ -22,7 +22,7 @@ export default async function Home() {
                     <input name="lastName" placeholder="Last Name" required />
                     <input name="email" placeholder="Email" type="email" required />
                     <select id="role" name="role">
-                        <option value="Administrator">Administrator</option>
+                        <option value="Administrators">Administrator</option>
                         <option value="Developer">Developer</option>
                     </select>
                     <button type="submit">Submit</button>
