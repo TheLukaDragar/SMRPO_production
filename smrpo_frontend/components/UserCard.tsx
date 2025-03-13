@@ -5,11 +5,11 @@ import {deleteUser, updateUser, User} from '@/lib/actions/user-actions';
 
 interface UserCardProps {
     user: User;
-    onEdit?: (userId: number) => void;
-    onDelete?: (userId: number) => void;
+    onUserUpdated: () => Promise<void>;
+    isAdmin: boolean;
 }
 
-const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
+const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => {
     const {userName, firstName, lastName, email, role, createdAt } = user;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editedUser, setEditedUser] = useState(user);
@@ -37,7 +37,6 @@ const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
 
     const closeModal = () => {
         setIsModalOpen(false);
-        // Reset form data when closing
         setEditedUser(user);
     };
 
@@ -52,32 +51,31 @@ const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
     //TODO: toasti, validation
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Submitting edited user:', editedUser);
-
         try {
             const result = await updateUser(user._id, editedUser);
-            console.log('Update result:', result);
 
             if (result && result.modifiedCount > 0) {
                 const updatedUser = { ...user, ...editedUser };
 
-                if (onEdit) {
-                    onEdit(updatedUser);
-                }
+                setEditedUser(updatedUser);
+                await onUserUpdated();
 
-                console.log('User updated successfully:', updatedUser);
+                closeModal();
             } else {
                 console.warn('Update operation completed but no documents were modified');
             }
-
-            closeModal();
         } catch (error) {
             console.error('Error updating user:', error);
         }
-    };
+        };
 
     const handleDelete = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!confirm('Are you sure you want to delete this user?')) {
+            return;
+        }
+
         try {
             const result = await deleteUser(user._id);
             console.log(result)
@@ -122,40 +120,51 @@ const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
                         </div>
                     )}
                 </div>
-
-                {(onEdit || onDelete) && (
-                    <div className="flex gap-2 mt-6">
-                        {onEdit && (
-                            <button
-                                onClick={() => onEdit(user._id)}
-                                className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors"
-                            >
-                                Edit
-                            </button>
-                        )}
-                        {onDelete && (
-                            <button
-                                onClick={() => onDelete(user._id)}
-                                className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition-colors"
-                            >
-                                Delete
-                            </button>
-                        )}
-                    </div>
-                )}
             </div>
-            <button
-                onClick={openModal}
-                className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
-            >
-                Edit User
-            </button>
-            <button
-                onClick={handleDelete}
-                className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
-            >
-                Delete User
-            </button>
+            <div className="flex gap-2 mt-6 justify-center w-full pb-4">
+                <div className="relative group">
+                    <button
+                        onClick={openModal}
+                        disabled={!isAdmin}
+                        className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200 ${
+                            isAdmin
+                                ? 'bg-black text-white hover:bg-gray-800 cursor-pointer'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300'
+                        }`}
+                    >
+                        Edit User
+                    </button>
+                    {!isAdmin && (
+                        <div className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                Only admins can edit users
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <div className="relative group">
+                <button
+                    onClick={handleDelete}
+                    disabled={!isAdmin}
+                    className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200 ${
+                        isAdmin
+                            ? 'bg-black text-white hover:bg-gray-800 cursor-pointer'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300'
+                    }`}
+                >
+                    Delete User
+                </button>
+                    {!isAdmin && (
+                        <div className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                Only admins can delete users
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
             <div
                 className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ${isModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             >

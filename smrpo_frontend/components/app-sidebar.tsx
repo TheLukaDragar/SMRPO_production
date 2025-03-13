@@ -103,7 +103,7 @@ const navData = {
         },
         {
           title: "Team Members",
-          url: "/dashboard/settings/team",
+          url: "/settings/team",
         },
         {
           title: "Permissions",

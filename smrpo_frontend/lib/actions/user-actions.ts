@@ -3,7 +3,7 @@
 import {connectToDatabase} from "@/lib/db/connection";
 import {revalidatePath} from 'next/cache';
 import {genSalt, hash} from "bcrypt-ts";
-import {User} from "../types/user-types";
+import {User, UserNoId} from "../types/user-types";
 import {ObjectId} from "mongodb";
 
 
@@ -18,8 +18,7 @@ export async function getUsers() {
 export async function handleAddUser(formData: FormData) {
     const salt = await genSalt(10);
 
-    const userData: User = {
-        _id: '', // This will be replaced by MongoDB
+    const userData : UserNoId = {
         userName: formData.get('userName') as string,
         password: await hash(formData.get('password') as string, salt),
         firstName: formData.get('firstName') as string,
@@ -34,7 +33,7 @@ export async function handleAddUser(formData: FormData) {
 }
 
 // Create a new user
-export async function addUser(userData: User) {
+export async function addUser(userData: UserNoId) {
     const { db } = await connectToDatabase();
     const result = await db().collection('users').insertOne({
         ...userData,

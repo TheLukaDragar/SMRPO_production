@@ -8,5 +8,14 @@ export interface User {
     email: string;
     role: string;
     createdAt: Date;
-    
+}
+
+export interface UserNoId {
+    userName: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    createdAt: Date;
 }
