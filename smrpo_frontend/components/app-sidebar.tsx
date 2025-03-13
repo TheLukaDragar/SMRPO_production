@@ -106,6 +106,10 @@ const navData = {
           url: "/settings/team",
         },
         {
+          title: "All Users",
+          url: "/settings/all_users",
+        },
+        {
           title: "Permissions",
           url: "/dashboard/settings/permissions",
         },
