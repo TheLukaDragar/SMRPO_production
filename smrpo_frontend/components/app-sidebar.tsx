@@ -109,6 +109,10 @@ const navData = {
           title: "Permissions",
           url: "/dashboard/settings/permissions",
         },
+        {
+          title: "User Settings",
+          url: "/profile",
+        },
       ],
     },
   ],
@@ -148,3 +152,5 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
     </Sidebar>
   )
 }
+
+
