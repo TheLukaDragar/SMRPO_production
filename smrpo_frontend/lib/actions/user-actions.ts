@@ -1,9 +1,10 @@
 'use server';
 
-import { connectToDatabase } from "@/lib/db/connection";
-import { revalidatePath } from 'next/cache';
-import { genSalt, hash } from "bcrypt-ts";
-import { User } from "../types/user-types";
+import {connectToDatabase} from "@/lib/db/connection";
+import {revalidatePath} from 'next/cache';
+import {genSalt, hash} from "bcrypt-ts";
+import {User} from "../types/user-types";
+import {ObjectId} from "mongodb";
 
 
 // Get all users
@@ -52,12 +53,17 @@ export async function getUserById(id: string) {
 
 // Update user
 export async function updateUser(id: string, userData: Partial<User>) {
+    console.log(userData)
     const { db } = await connectToDatabase();
+
+    const { _id, ...updateData } = userData;
+
     const result = await db().collection('users').updateOne(
-        { _id: id },
-        { $set: userData }
+        { _id: new ObjectId(id) },
+        { $set: updateData }
     );
-    
+
+
     revalidatePath('/users');
     return result;
 }
@@ -108,14 +114,13 @@ export async function handleUpdateUser(formData: FormData, userId: string) {
     }
 
     // Execute the update operation
-    const result = await updateUser(userId, updateData);
-    return result;
+    return await updateUser(userId, updateData);
 }
 
 // Delete user
 export async function deleteUser(id: string) {
     const { db } = await connectToDatabase();
-    const result = await db().collection('users').deleteOne({ _id: id });
+    const result = await db().collection('users').deleteOne({ _id: new ObjectId(id) });
     
     revalidatePath('/users');
     return result;

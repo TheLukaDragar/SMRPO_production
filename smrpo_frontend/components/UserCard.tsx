@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
-import { User } from '@/lib/actions/user-actions';
+import React, {useState} from 'react';
+import {deleteUser, updateUser, User} from '@/lib/actions/user-actions';
+
 interface UserCardProps {
     user: User;
     onEdit?: (userId: number) => void;
@@ -10,6 +11,8 @@ interface UserCardProps {
 
 const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
     const {userName, firstName, lastName, email, role, createdAt } = user;
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editedUser, setEditedUser] = useState(user);
 
     const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 
@@ -28,8 +31,64 @@ const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
         }
     };
 
+    const openModal = () => {
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        // Reset form data when closing
+        setEditedUser(user);
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setEditedUser((prev: any) => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    //TODO: toasti, validation
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log('Submitting edited user:', editedUser);
+
+        try {
+            const result = await updateUser(user._id, editedUser);
+            console.log('Update result:', result);
+
+            if (result && result.modifiedCount > 0) {
+                const updatedUser = { ...user, ...editedUser };
+
+                if (onEdit) {
+                    onEdit(updatedUser);
+                }
+
+                console.log('User updated successfully:', updatedUser);
+            } else {
+                console.warn('Update operation completed but no documents were modified');
+            }
+
+            closeModal();
+        } catch (error) {
+            console.error('Error updating user:', error);
+        }
+    };
+
+    const handleDelete = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            const result = await deleteUser(user._id);
+            console.log(result)
+        } catch (error) {
+            console.error('Error updating user:', error);
+        }
+    }
+
+
     return (
-        <div className="w-full max-w-md bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow duration-300">
+    <div className="w-full max-w-md bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="p-5">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="relative h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-medium overflow-hidden">
@@ -48,7 +107,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
                     </div>
                     <div className="flex items-center">
                         <span className="text-gray-500 w-24">User ID:</span>
-                        <span className="text-gray-700">{123}</span>
+                        <span className="text-gray-700">{user._id}</span>
                     </div>
                     <div className="flex items-center">
                         <span className="text-gray-500 w-24">Role:</span>
@@ -68,7 +127,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
                     <div className="flex gap-2 mt-6">
                         {onEdit && (
                             <button
-                                onClick={() => onEdit(123)}
+                                onClick={() => onEdit(user._id)}
                                 className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors"
                             >
                                 Edit
@@ -76,7 +135,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
                         )}
                         {onDelete && (
                             <button
-                                onClick={() => onDelete(123)}
+                                onClick={() => onDelete(user._id)}
                                 className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition-colors"
                             >
                                 Delete
@@ -84,6 +143,139 @@ const UserCard: React.FC<UserCardProps> = ({ user, onEdit, onDelete }) => {
                         )}
                     </div>
                 )}
+            </div>
+            <button
+                onClick={openModal}
+                className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
+            >
+                Edit User
+            </button>
+            <button
+                onClick={handleDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
+            >
+                Delete User
+            </button>
+            <div
+                className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ${isModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            >
+                <div
+                    className="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm"
+                    onClick={closeModal}
+                ></div>
+
+                <div
+                    className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative transform transition-all duration-300 scale-100 opacity-100 z-10"
+                >
+                    <button
+                        onClick={closeModal}
+                        className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 transition-colors"
+                        aria-label="Close modal"
+                    >
+                        <span className="text-2xl">&times;</span>
+                    </button>
+
+                    <h3 className="text-xl font-bold mb-4">Edit User</h3>
+
+                    <form onSubmit={handleSubmit}>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                                        First Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="firstName"
+                                        name="firstName"
+                                        value={editedUser.firstName}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Last Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="lastName"
+                                        name="lastName"
+                                        value={editedUser.lastName}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="userName" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Username
+                                </label>
+                                <input
+                                    type="text"
+                                    id="userName"
+                                    name="userName"
+                                    value={editedUser.userName}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    name="email"
+                                    value={editedUser.email}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Role
+                                </label>
+                                <select
+                                    id="role"
+                                    name="role"
+                                    value={editedUser.role}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                >
+                                    <option value="User">User</option>
+                                    <option value="Developer">Developer</option>
+                                    <option value="Administrator">Administrator</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 mt-6">
+                            <button
+                                type="button"
+                                onClick={closeModal}
+                                className="px-4 py-2 bg-gray-200 text-gray-800 text-sm font-medium rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors"
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );
