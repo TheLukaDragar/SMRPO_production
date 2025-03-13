@@ -21,3 +21,10 @@ export async function addStory(story: UserStoryNoId) {
 
     return result;
 }
+
+//TODO: TO JE ZACASNO
+export async function getAllSprints() {
+    const { db } = await connectToDatabase();
+    const users = await db().collection('sprint').find({}).toArray();
+    return JSON.parse(JSON.stringify(users));
+}
