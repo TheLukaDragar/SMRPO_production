@@ -5,7 +5,7 @@ import { ChevronsUpDown, Plus, Loader2, Info } from "lucide-react"
 import { Project } from "@/lib/types/project-types"
 import { useProject } from "@/lib/contexts/project-context"
 import { ProjectFormDialog } from "@/components/project-form-dialog"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 
 import {
   DropdownMenu,
@@ -25,6 +25,7 @@ import {
 
 export function ProjectSwitcher() {
   const router = useRouter()
+  const pathname = usePathname()
   const { isMobile } = useSidebar()
   const { activeProject, setActiveProject, projects, loading, error, refreshProjects } = useProject()
   const [projectFormOpen, setProjectFormOpen] = React.useState(false)
@@ -32,8 +33,20 @@ export function ProjectSwitcher() {
   const handleProjectSelect = (project: Project) => {
     console.log('Selecting project:', project._id);
     setActiveProject(project);
-    // Navigate to the selected project's details page
-    router.push(`/dashboard/project/${project._id}`);
+    
+    // Get the current path segments
+    const pathSegments = pathname.split('/')
+    const currentProjectIndex = pathSegments.findIndex(segment => segment === 'project')
+    
+    if (currentProjectIndex !== -1 && pathSegments[currentProjectIndex + 1]) {
+      // Replace the project ID in the current path
+      pathSegments[currentProjectIndex + 1] = project._id
+      const newPath = pathSegments.join('/')
+      router.push(newPath)
+    } else {
+      // If not in a project-specific route, go to project overview
+      router.push(`/dashboard/project/${project._id}`)
+    }
   }
 
   const handleViewProjectDetails = () => {

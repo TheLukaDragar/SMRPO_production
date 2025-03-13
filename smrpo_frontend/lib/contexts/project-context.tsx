@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { Project } from '@/lib/types/project-types'
-import { getProjects } from '@/lib/actions/project-actions'
+import { getProjects, getProjectById } from '@/lib/actions/project-actions'
 
 interface ProjectContextType {
   activeProject: Project | null
@@ -11,6 +11,7 @@ interface ProjectContextType {
   loading: boolean
   error: string | null
   refreshProjects: () => Promise<void>
+  refreshProject: () => Promise<void>
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined)
@@ -39,6 +40,15 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const refreshActiveProject = async () => {
+    if (activeProject?._id) {
+      const response = await getProjectById(activeProject._id)
+      if (!('error' in response) && response) {
+        setActiveProject(response)
+      }
+    }
+  }
+
   useEffect(() => {
     fetchProjects()
   }, [])
@@ -51,7 +61,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         projects, 
         loading, 
         error,
-        refreshProjects: fetchProjects
+        refreshProjects: fetchProjects,
+        refreshProject: refreshActiveProject
       }}
     >
       {children}

@@ -7,6 +7,7 @@ import { ZodError } from 'zod';
 import { AppError, createErrorResponse, ErrorResponse } from '../utils/error-handling';
 import { Project, ProjectRole } from '../types/project-types';
 import { getSession } from '@/lib/auth/session';
+import { ObjectId } from 'mongodb';
 
 // Get all projects
 export async function getProjects(): Promise<Project[] | ErrorResponse> {
@@ -120,7 +121,7 @@ export async function getProjectById(id: string): Promise<Project | null | Error
         if (!id) throw new AppError('Project ID is required', 400);
         
         const { db } = await connectToDatabase();
-        const project = await db().collection('projects').findOne({ _id: id });
+        const project = await db().collection('projects').findOne({ _id: new ObjectId(id) });
         return project ? JSON.parse(JSON.stringify(project)) : null;
     } catch (error) {
         return createErrorResponse(error);
@@ -136,7 +137,7 @@ export async function updateProject(id: string, projectData: Partial<Project>): 
 
         const { db } = await connectToDatabase();
         const result = await db().collection('projects').updateOne(
-            { _id: id },
+            { _id: new ObjectId(id) },
             { $set: validatedData }
         );
         
@@ -164,7 +165,7 @@ export async function deleteProject(id: string): Promise<any | ErrorResponse> {
         if (!id) throw new AppError('Project ID is required', 400, 'ValidationError');
 
         const { db } = await connectToDatabase();
-        const result = await db().collection('projects').deleteOne({ _id: id });
+        const result = await db().collection('projects').deleteOne({ _id: new ObjectId(id) });
         
         if (result.deletedCount === 0) {
             throw new AppError('Project not found', 404, 'NotFoundError');
@@ -181,13 +182,14 @@ export async function deleteProject(id: string): Promise<any | ErrorResponse> {
 export async function addProjectMember(projectId: string, userId: string, role: ProjectRole): Promise<any | ErrorResponse> {
     try {
         if (!projectId) throw new AppError('Project ID is required', 400, 'ValidationError');
+        console.log("addProjectMember", projectId, userId, role)
 
         // Validate the member data
         const validatedData = validateAddProjectMember({ userId, role });
 
         const { db } = await connectToDatabase();
         const result = await db().collection('projects').updateOne(
-            { _id: projectId },
+            { _id: new ObjectId(projectId) },
             { 
                 $push: { 
                     members: {
@@ -261,7 +263,7 @@ export async function removeProjectMember(projectId: string, userId: string) {
         const { db } = await connectToDatabase();
         
         // Check if this would remove the last member
-        const project = await db().collection('projects').findOne({ _id: projectId });
+        const project = await db().collection('projects').findOne({ _id: new ObjectId(projectId) });
         if (!project) {
             throw new Error('Project not found');
         }
@@ -271,7 +273,7 @@ export async function removeProjectMember(projectId: string, userId: string) {
         }
 
         const result = await db().collection('projects').updateOne(
-            { _id: projectId },
+            { _id: new ObjectId(projectId) },
             { 
                 $pull: { 
                     members: { userId }
