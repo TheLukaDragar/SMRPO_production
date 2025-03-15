@@ -37,7 +37,7 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
   const navItems = {
     navMain: [
       {
-        title: "Dashboard",
+        title: "Projects",
         url: "/dashboard",
         icon: SquareTerminal,
         isActive: true,
@@ -145,7 +145,7 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
       items: [
         {
           title: "User Management",
-          url: "/dashboard/admin/users",
+          url: "/dashboard/admin/user_managment",
         },
         {
           title: "System Settings",

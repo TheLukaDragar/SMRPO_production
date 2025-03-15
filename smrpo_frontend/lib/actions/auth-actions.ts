@@ -7,6 +7,7 @@ import { validateLogin, validateUser } from '../validations/auth-validations';
 import { AppError, createErrorResponse, ErrorResponse } from '../utils/error-handling';
 import { redirect } from 'next/navigation';
 import { ZodError } from 'zod';
+import { UserRole } from '../types/user-types';
 
 export async function login(formData: FormData): Promise<{ success: true } | ErrorResponse> {
     try {
@@ -75,10 +76,10 @@ export async function register(formData: FormData): Promise<{ success: true } | 
             firstName: formData.get('firstName') as string,
             lastName: formData.get('lastName') as string,
             email: formData.get('email') as string,
-            role: formData.get('role') as string,
+            role: formData.get('role') as UserRole,
         };
 
-        // Validate input
+        // Validate input first
         const validatedData = validateUser(userData);
 
         const { db } = await connectToDatabase();
@@ -95,11 +96,11 @@ export async function register(formData: FormData): Promise<{ success: true } | 
             return createErrorResponse(new AppError('Username already taken', 400, 'ValidationError'));
         }
 
-        // Hash password
+        // Only hash password after all validations pass
         const salt = await genSalt(10);
         const hashedPassword = await hash(validatedData.password, salt);
 
-        // Create user
+        // Create user with hashed password
         await db().collection('users').insertOne({
             ...validatedData,
             password: hashedPassword,

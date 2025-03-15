@@ -8,21 +8,45 @@ interface Session {
 
 export async function getSession(): Promise<Session | null> {
     try {
-        const sessionToken = cookies().get('session_token')?.value;
+        const cookiesStore = await cookies();
+        const sessionToken = cookiesStore.get('session_token')?.value;
         
         if (!sessionToken) {
             return null;
         }
 
         const { db } = await connectToDatabase();
-        const session = await db().collection('sessions').findOne({ token: sessionToken });
+        const sessionPromise = db().collection('sessions')
+            .findOne({ 
+                token: sessionToken,
+                expiresAt: { $gt: new Date() } // Only get non-expired sessions
+            }, { 
+                maxTimeMS: 5000 // 5 second timeout
+            });
+
+        const session = await Promise.race([
+            sessionPromise,
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Session query timeout')), 5000)
+            )
+        ]);
         
         if (!session) {
             return null;
         }
 
-        // Get user data
-        const user = await db().collection('users').findOne({ _id: session.userId });
+        // Get user data with timeout
+        const userPromise = db().collection('users')
+            .findOne({ _id: session.userId }, { 
+                maxTimeMS: 5000 
+            });
+
+        const user = await Promise.race([
+            userPromise,
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('User query timeout')), 5000)
+            )
+        ]);
         
         if (!user) {
             return null;

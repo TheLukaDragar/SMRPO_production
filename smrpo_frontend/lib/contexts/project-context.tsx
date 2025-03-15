@@ -43,7 +43,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const refreshActiveProject = async () => {
     if (activeProject?._id) {
       const response = await getProjectById(activeProject._id)
-      if (!('error' in response) && response) {
+      if (response && !('error' in response)) {
         setActiveProject(response)
       }
     }

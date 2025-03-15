@@ -8,13 +8,42 @@ import { AppError, createErrorResponse, ErrorResponse } from '../utils/error-han
 import { Project, ProjectRole } from '../types/project-types';
 import { getSession } from '@/lib/auth/session';
 import { ObjectId } from 'mongodb';
-
+import { UserRole } from '../types/user-types';
 // Get all projects
 export async function getProjects(): Promise<Project[] | ErrorResponse> {
     try {
         const { db } = await connectToDatabase();
         const projects = await db().collection('projects').find({}).toArray();
         console.log(projects);
+        return JSON.parse(JSON.stringify(projects));
+    } catch (error) {
+        return createErrorResponse(error);
+    }
+}
+
+//get my projects
+export async function getMyProjects(): Promise<Project[] | ErrorResponse> {
+    console.log("getMyProjects");
+    try {
+        const { db } = await connectToDatabase();
+        const session = await getSession();
+        if (!session?.user?._id) {
+            return createErrorResponse(new AppError('User not authenticated', 401, 'AuthError'));
+        }
+
+        console.log("session", session);
+
+        // If user is admin, return all projects
+        if (session.user.role === UserRole.ADMINISTRATOR) {
+            const projects = await db().collection('projects').find({}).toArray();
+            console.log(projects);
+            return JSON.parse(JSON.stringify(projects));
+        }
+
+        // Otherwise return only projects where user is a member
+        const projects = await db().collection('projects').find({ 
+            'members.userId': session.user._id 
+        }).toArray();
         return JSON.parse(JSON.stringify(projects));
     } catch (error) {
         return createErrorResponse(error);
@@ -28,6 +57,15 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
         const session = await getSession();
         if (!session?.user?._id) {
             return createErrorResponse(new AppError('User not authenticated', 401, 'AuthError'));
+        }
+
+        const projectName = formData.get('name') as string;
+        
+        // Check for duplicate project name
+        const { db } = await connectToDatabase();
+        const existingProject = await db().collection('projects').findOne({ name: projectName });
+        if (existingProject) {
+            return createErrorResponse(new AppError('A project with this name already exists', 400, 'ValidationError'));
         }
 
         // Get members from form data
@@ -54,8 +92,22 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
         });
 
         // Convert to array and add joinedAt
+        const seenUserIds = new Set<string>();
+        let productOwnerCount = 0;
+
         membersByIndex.forEach((member) => {
             if (member.userId && member.role) {
+                // Check for duplicate users
+                if (seenUserIds.has(member.userId)) {
+                    throw new AppError('Duplicate user found in project members', 400, 'ValidationError');
+                }
+                seenUserIds.add(member.userId);
+
+                // Count PRODUCT_OWNER roles
+                if (member.role === ProjectRole.PRODUCT_OWNER) {
+                    productOwnerCount++;
+                }
+
                 members.push({
                     userId: member.userId,
                     role: member.role,
@@ -64,13 +116,9 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
             }
         });
 
-        // Add the creator as PRODUCT_OWNER if not already included
-        if (!members.some(member => member.userId === session.user._id)) {
-            members.push({
-                userId: session.user._id,
-                role: ProjectRole.PRODUCT_OWNER,
-                joinedAt: new Date()
-            });
+        // Validate PRODUCT_OWNER count
+        if (productOwnerCount !== 1) {
+            throw new AppError('Project must have exactly one Product Owner', 400, 'ValidationError');
         }
 
         const projectData = {
@@ -85,6 +133,9 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
         revalidatePath('/dashboard');
         return { success: true };
     } catch (error) {
+        if (error instanceof AppError) {
+            return createErrorResponse(error);
+        }
         if (error instanceof ZodError) {
             return createErrorResponse(new AppError(
                 `Validation error: ${error.errors.map(e => e.message).join(', ')}`,

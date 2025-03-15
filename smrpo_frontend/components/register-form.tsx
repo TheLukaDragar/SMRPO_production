@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +11,7 @@ import { useState } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ErrorResponse } from "@/lib/utils/error-handling"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { UserRole } from '@/lib/types/user-types';
 
 export function RegisterForm({
   className,
@@ -145,8 +147,8 @@ export function RegisterForm({
               <SelectValue placeholder="Select your role" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Developer">Developer</SelectItem>
-              <SelectItem value="Administrator">Administrator</SelectItem>
+              <SelectItem value={UserRole.DEVELOPER}>Developer</SelectItem>
+              <SelectItem value={UserRole.ADMINISTRATOR}>Administrator</SelectItem>
             </SelectContent>
           </Select>
           {getFieldError('role') && (
@@ -159,9 +161,9 @@ export function RegisterForm({
       </div>
       <div className="text-center text-sm">
         Already have an account?{" "}
-        <a href="/login" className="underline underline-offset-4">
+        <Link href="/login" className="underline underline-offset-4">
           Sign in
-        </a>
+        </Link>
       </div>
     </form>
   )

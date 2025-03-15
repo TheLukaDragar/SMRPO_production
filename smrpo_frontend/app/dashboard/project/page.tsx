@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useProject } from '@/lib/contexts/project-context';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getProjects } from '@/lib/actions/project-actions';
 
 export default function ProjectRedirectPage() {
   const router = useRouter();

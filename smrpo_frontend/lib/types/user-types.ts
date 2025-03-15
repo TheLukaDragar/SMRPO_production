@@ -1,4 +1,9 @@
 // Type for User document
+export enum UserRole {
+    ADMINISTRATOR = 'Administrator',
+    DEVELOPER = 'Developer',
+}
+
 export interface User {
     _id: string;
     userName: string;
@@ -6,7 +11,7 @@ export interface User {
     firstName: string;
     lastName: string;
     email: string;
-    role: string;
+    role: UserRole;
     createdAt: Date;
 }
 
@@ -16,6 +21,6 @@ export interface UserNoId {
     firstName: string;
     lastName: string;
     email: string;
-    role: string;
+    role: UserRole;
     createdAt: Date;
 }

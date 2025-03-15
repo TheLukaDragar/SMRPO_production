@@ -1,6 +1,6 @@
 "use client"
 import {addUser, getUsers, handleAddUser} from "@/lib/actions/user-actions";
-import { User } from "@/lib/types/user-types";
+import { User, UserRole } from "@/lib/types/user-types";
 import UserCard from "@/components/UserCard";
 import React, {useCallback, useEffect, useState} from "react";
 import {useUser} from "@/lib/hooks/useUser";
@@ -18,7 +18,7 @@ export default function Home() {
         lastName: "",
         email: "",
         password: "",
-        role: "User"
+        role: UserRole.DEVELOPER
     });
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,7 +26,7 @@ export default function Home() {
     const { user } = useUser()
 
     useEffect(() => {
-        setIsAdmin(user?.role === "Administrator")
+        setIsAdmin(user?.role === UserRole.ADMINISTRATOR)
     }, [user]);
 
     const fetchUsers = useCallback(async () => {
@@ -256,9 +256,8 @@ export default function Home() {
                                         onChange={handleInputChange}
                                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                     >
-                                        <option value="User">User</option>
-                                        <option value="Developer">Developer</option>
-                                        <option value="Administrator">Administrator</option>
+                                        <option value={UserRole.DEVELOPER}>{UserRole.DEVELOPER}</option>
+                                        <option value={UserRole.ADMINISTRATOR}>{UserRole.ADMINISTRATOR}</option>
                                     </select>
                                 </div>
                             </div>

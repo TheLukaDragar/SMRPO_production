@@ -1,11 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus, Loader2, Info } from "lucide-react"
+import { ChevronsUpDown, Plus, Loader2, Info, BookDashed } from "lucide-react"
 import { Project } from "@/lib/types/project-types"
 import { useProject } from "@/lib/contexts/project-context"
-import { ProjectFormDialog } from "@/components/project-form-dialog"
 import { useRouter, usePathname } from "next/navigation"
+import { useUser } from "@/lib/hooks/useUser"
 
 import {
   DropdownMenu,
@@ -27,8 +27,9 @@ export function ProjectSwitcher() {
   const router = useRouter()
   const pathname = usePathname()
   const { isMobile } = useSidebar()
+  const { user } = useUser()
   const { activeProject, setActiveProject, projects, loading, error, refreshProjects } = useProject()
-  const [projectFormOpen, setProjectFormOpen] = React.useState(false)
+  const isAdmin = user?.role === "Administrator"
 
   const handleProjectSelect = (project: Project) => {
     console.log('Selecting project:', project._id);
@@ -63,10 +64,11 @@ export function ProjectSwitcher() {
   }
 
   const handleAddProjectClick = () => {
+    console.log('Adding project');
     // Close the dropdown menu
     document.body.click()
-    // Open the project form dialog
-    setProjectFormOpen(true)
+    // Redirect to dashboard with create=true parameter
+    router.push('/dashboard?create=true')
   }
 
   if (loading) {
@@ -81,7 +83,8 @@ export function ProjectSwitcher() {
               <Loader2 className="size-4 animate-spin" />
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">Loading projects...</span>
+              <span className="truncate font-medium">Loading workspace...</span>
+              <span className="truncate text-xs text-muted-foreground">Please wait</span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -99,7 +102,7 @@ export function ProjectSwitcher() {
             onClick={() => refreshProjects()}
           >
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">Error: {error}</span>
+              <span className="truncate font-medium">Error loading projects</span>
               <span className="truncate text-xs">Click to retry</span>
             </div>
           </SidebarMenuButton>
@@ -114,14 +117,19 @@ export function ProjectSwitcher() {
         <SidebarMenuItem>
           <SidebarMenuButton
             size="lg"
-            onClick={handleAddProjectClick}
+            onClick={isAdmin ? handleAddProjectClick : undefined}
+            className={!isAdmin ? "cursor-not-allowed opacity-70" : ""}
           >
             <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-              <Plus className="size-4" />
+              {isAdmin ? <Plus className="size-4" /> : <BookDashed className="size-4" />}
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">Create Project</span>
-              <span className="truncate text-xs">No projects available</span>
+              <span className="truncate font-medium">
+                {isAdmin ? "Create Project" : "No projects yet"}
+              </span>
+              <span className="truncate text-xs text-muted-foreground">
+                {isAdmin ? "Start a new project" : "Contact administrator"}
+              </span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -144,9 +152,10 @@ export function ProjectSwitcher() {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{activeProject.name}</span>
-                  <span className="truncate text-xs">{activeProject.description || 'No description'}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {activeProject.description || 'Current workspace'}
+                  </span>
                 </div>
-                <ChevronsUpDown className="ml-auto" />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -156,7 +165,7 @@ export function ProjectSwitcher() {
               sideOffset={4}
             >
               <DropdownMenuLabel className="text-muted-foreground text-xs">
-                Projects
+                {isAdmin ? "All Projects" : "My Projects"}
               </DropdownMenuLabel>
               {projects.map((project, index) => (
                 <DropdownMenuItem
@@ -167,7 +176,14 @@ export function ProjectSwitcher() {
                   <div className="flex size-6 items-center justify-center rounded-xs border">
                     <ChevronsUpDown className="size-4 shrink-0" />
                   </div>
-                  {project.name}
+                  <div className="flex-1 truncate">
+                    {project.name}
+                    {project.description && (
+                      <span className="block text-xs text-muted-foreground truncate">
+                        {project.description}
+                      </span>
+                    )}
+                  </div>
                   <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
                 </DropdownMenuItem>
               ))}
@@ -179,31 +195,23 @@ export function ProjectSwitcher() {
                 <div className="bg-background flex size-6 items-center justify-center rounded-md border">
                   <Info className="size-4" />
                 </div>
-                <div className="text-muted-foreground font-medium">View project details</div>
+                <div className="text-muted-foreground font-medium">Project details</div>
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                className="gap-2 p-2 cursor-pointer"
-                onClick={handleAddProjectClick}
-              >
-                <div className="bg-background flex size-6 items-center justify-center rounded-md border">
-                  <Plus className="size-4" />
-                </div>
-                <div className="text-muted-foreground font-medium">Add project</div>
-              </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem 
+                  className="gap-2 p-2 cursor-pointer"
+                  onClick={handleAddProjectClick}
+                >
+                  <div className="bg-background flex size-6 items-center justify-center rounded-md border">
+                    <Plus className="size-4" />
+                  </div>
+                  <div className="text-muted-foreground font-medium">Create new project</div>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
-
-      <ProjectFormDialog 
-        open={projectFormOpen}
-        onOpenChange={(open) => {
-          setProjectFormOpen(open)
-          if (!open) {
-            refreshProjects()
-          }
-        }}
-      />
     </>
   )
 }

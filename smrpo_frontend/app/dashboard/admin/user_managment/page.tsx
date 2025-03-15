@@ -1,11 +1,12 @@
 "use client"
 import {addUser, getUsers, handleAddUser} from "@/lib/actions/user-actions";
-import { User } from "@/lib/types/user-types";
+import { User, UserRole } from "@/lib/types/user-types";
 import UserCard from "@/components/UserCard";
 import React, {useCallback, useEffect, useState} from "react";
 import {useUser} from "@/lib/hooks/useUser";    
+import { ZodError } from "zod";
 
-export default function Home() {
+export default function UserManagment() {
     const [searchValue, setSearchValue] = useState("")
     const [isAdmin, setIsAdmin] = useState(false);
     const [users, setUsers] = useState<User[]>([]);
@@ -72,21 +73,34 @@ export default function Home() {
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError("");
+        setIsSubmitting(true);
 
-        if (!newUser.userName || !newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
-            setError("All fields are required");
-            return;
+        try {
+            const formData = new FormData(event.currentTarget);
+            await handleAddUser(formData);
+            setIsModalOpen(false);
+            fetchUsers(); // Refresh the user list
+        } catch (error) {
+            if (error instanceof Error) {
+                try {
+                    // Try to parse the error message as JSON
+                    const parsedError = JSON.parse(error.message.replace('Validation error: ', ''));
+                    if (Array.isArray(parsedError)) {
+                        // If it's an array of validation errors, show the first one
+                        setError(parsedError[0].message);
+                    } else {
+                        setError(error.message);
+                    }
+                } catch {
+                    // If parsing fails, show the original error message
+                    setError(error.message.replace('Validation error: ', ''));
+                }
+            } else {
+                setError('An unexpected error occurred');
+            }
+        } finally {
+            setIsSubmitting(false);
         }
-
-        if (!newUser.email.includes('@')) {
-            setError("Please enter a valid email address");
-            return;
-        }
-
-        const formData = new FormData(event.currentTarget);
-        await handleAddUser(formData);
-
-        setIsModalOpen(false);
     };
 
     return (
@@ -256,9 +270,8 @@ export default function Home() {
                                         onChange={handleInputChange}
                                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                     >
-                                        <option value="User">User</option>
-                                        <option value="Developer">Developer</option>
-                                        <option value="Administrator">Administrator</option>
+                                        <option value={UserRole.DEVELOPER}>{UserRole.DEVELOPER}</option>
+                                        <option value={UserRole.ADMINISTRATOR}>{UserRole.ADMINISTRATOR}</option>
                                     </select>
                                 </div>
                             </div>
@@ -278,7 +291,7 @@ export default function Home() {
                                         isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
                                     }`}
                                 >
-                                    {isSubmitting ? 'Adding...' : 'Add User'}
+                                    {isSubmitting ? 'Creating...' : 'Create User'}
                                 </button>
                             </div>
                         </form>

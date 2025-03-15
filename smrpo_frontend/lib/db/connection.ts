@@ -19,7 +19,13 @@ export async function connectToDatabase(): Promise<MongoDBConnection> {
         };
     }
 
-    const client = new MongoClient(uri);
+    const client = new MongoClient(uri, {
+        connectTimeoutMS: 5000, // 5 seconds timeout for initial connection
+        socketTimeoutMS: 30000, // 30 seconds for operations
+        maxPoolSize: 10, // Limit concurrent connections
+        minPoolSize: 0,
+        maxIdleTimeMS: 30000, // Close idle connections after 30 seconds
+    });
     await client.connect();
 
     cachedClient = client;

@@ -3,8 +3,9 @@
 import {connectToDatabase} from "@/lib/db/connection";
 import {revalidatePath} from 'next/cache';
 import {genSalt, hash} from "bcrypt-ts";
-import {User, UserNoId} from "../types/user-types";
+import {User, UserNoId, UserRole} from "../types/user-types";
 import {ObjectId} from "mongodb";
+import { validateUser, userSchema } from '../validations/auth-validations';
 
 
 // Get all users
@@ -16,17 +17,41 @@ export async function getUsers() {
 
 // Handle user form submission
 export async function handleAddUser(formData: FormData) {
-    const salt = await genSalt(10);
+    const { db } = await connectToDatabase();
+
+    const email = formData.get('email') as string;
+    const userName = formData.get('userName') as string;
+   
+
+    // Check for duplicate email
+    const duplicateEmail = await db().collection('users').findOne({ email });
+    if (duplicateEmail) {
+        throw new Error("Email already registered");
+    }
 
     const userData : UserNoId = {
-        userName: formData.get('userName') as string,
-        password: await hash(formData.get('password') as string, salt),
+        userName,
+        password: formData.get('password') as string,
         firstName: formData.get('firstName') as string,
         lastName: formData.get('lastName') as string,
-        email: formData.get('email') as string,
-        role: formData.get('role') as string,
+        email,
+        role: formData.get('role') as UserRole,
         createdAt: new Date(),
     };
+
+    // Validate user data before hashing
+    try {
+        validateUser(userData);
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Validation error: ${error.message}`);
+        }
+        throw error;
+    }
+
+    // Hash password after validation
+    const salt = await genSalt(10);
+    userData.password = await hash(userData.password, salt);
 
     await addUser(userData);
     revalidatePath('/users');
@@ -91,13 +116,6 @@ export async function handleUpdateUser(formData: FormData, userId: string) {
         updateData.userName = newUserName;
     }
 
-    // Check and update password if provided
-    const newPassword = formData.get("password") as string;
-    if (newPassword) {
-        const salt = await genSalt(10);
-        updateData.password = await hash(newPassword, salt);
-    }
-
     // Update other personal details
     const firstName = formData.get("firstName") as string;
     if (firstName) {
@@ -110,6 +128,40 @@ export async function handleUpdateUser(formData: FormData, userId: string) {
     const email = formData.get("email") as string;
     if (email) {
         updateData.email = email;
+    }
+
+    // Create merged object for validation
+    const validationData = {
+        ...currentUser,
+        ...updateData
+    };
+
+    // Check and update password if provided - after initial validation
+    const newPassword = formData.get("password") as string;
+    if (newPassword) {
+        validationData.password = newPassword;
+        // Validate with the new unhashed password
+        try {
+            validateUser(validationData);
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Validation error: ${error.message}`);
+            }
+            throw error;
+        }
+        // Only hash password after validation
+        const salt = await genSalt(10);
+        updateData.password = await hash(newPassword, salt);
+    } else {
+        // Validate without password change
+        try {
+            validateUser(validationData);
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Validation error: ${error.message}`);
+            }
+            throw error;
+        }
     }
 
     // Execute the update operation

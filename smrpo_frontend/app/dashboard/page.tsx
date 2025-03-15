@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FilterIcon, MoreVertical, Pencil, Trash2 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { FilterIcon, MoreVertical, Pencil, Trash2, PlusIcon } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ProjectFormDialog } from "@/components/project-form-dialog"
 import { ProjectEditDialog } from "@/components/project-edit-dialog"
 import { deleteProject } from "@/lib/actions/project-actions"
@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import { Project } from "@/lib/types/project-types"
+import { useUser } from "@/lib/hooks/useUser"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,10 +25,25 @@ import { useProject } from '@/lib/contexts/project-context';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { user } = useUser();
   const { activeProject, projects, loading, error: contextError, refreshProjects } = useProject();
   const [error, setError] = useState<ErrorResponse['error'] | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [projectFormOpen, setProjectFormOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    setIsAdmin(user?.role === "Administrator");
+  }, [user]);
+
+  useEffect(() => {
+    // Open project form dialog if create=true is in URL and user is admin
+    if (searchParams.get('create') === 'true' && isAdmin) {
+      setProjectFormOpen(true);
+    }
+  }, [searchParams, isAdmin]);
 
   useEffect(() => {
     if (contextError) {
@@ -39,7 +55,27 @@ export default function DashboardPage() {
     }
   }, [contextError]);
 
+  const handleProjectFormOpenChange = (open: boolean) => {
+    setProjectFormOpen(open);
+    if (!open) {
+      // Remove the create parameter from URL when dialog is closed
+      const url = new URL(window.location.href);
+      url.searchParams.delete('create');
+      router.replace(url.pathname);
+      refreshProjects();
+    }
+  };
+
   const handleDeleteProject = async (projectId: string) => {
+    if (!isAdmin) {
+      toast({
+        variant: "destructive",
+        title: "Permission denied",
+        description: "Only administrators can delete projects.",
+      });
+      return;
+    }
+
     try {
       await deleteProject(projectId);
       await refreshProjects();
@@ -69,9 +105,22 @@ export default function DashboardPage() {
     <div className="flex-1 overflow-auto">
       <div className="container max-w-screen-lg mx-auto p-6">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-semibold">My workspaces</h1>
+          <h1 className="text-2xl font-semibold">
+            {isAdmin ? "All Projects" : "My Projects"}
+          </h1>
           <div className="flex gap-2">
-            <ProjectFormDialog />
+            {isAdmin && (
+              <ProjectFormDialog 
+                open={projectFormOpen}
+                onOpenChange={handleProjectFormOpenChange}
+                trigger={
+                  <Button size="sm" variant="outline">
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    Add Project
+                  </Button>
+                }
+              />
+            )}
             <Button size="sm" variant="outline">
               <FilterIcon className="h-4 w-4" />
             </Button>
@@ -90,7 +139,7 @@ export default function DashboardPage() {
           {projects.length === 0 ? (
             <div className="text-center py-8 bg-slate-50 rounded-lg">
               <p className="text-muted-foreground">
-                {error ? 'Unable to load projects' : 'No projects found. Create your first project!'}
+                {error ? 'Unable to load projects' : isAdmin ? 'No projects yet, let\'s create one!' : 'You are not assigned to any projects yet. Contact your administrator.'}
               </p>
             </div>
           ) : (
@@ -104,27 +153,29 @@ export default function DashboardPage() {
                       </span>
                       {project.name}
                     </CardTitle>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditingProject(project)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => handleDeleteProject(project._id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {isAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setEditingProject(project)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => handleDeleteProject(project._id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
