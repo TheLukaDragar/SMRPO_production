@@ -2,6 +2,9 @@
 
 import React, {useState} from 'react';
 import {deleteUser, updateUser, User} from '@/lib/actions/user-actions';
+import { useToast } from "@/components/ui/use-toast";
+import type { ErrorResponse } from '@/lib/utils/error-handling';
+import { UserRole } from '@/lib/types/user-types';
 
 interface UserCardProps {
     user: User;
@@ -13,6 +16,8 @@ const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => 
     const {userName, firstName, lastName, email, role, createdAt } = user;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editedUser, setEditedUser] = useState(user);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { toast } = useToast();
 
     const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 
@@ -22,9 +27,9 @@ const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => 
 
     const getRoleBadgeColor = (role: string) => {
         switch(role.toLowerCase()) {
-            case 'Administrator':
+            case 'administrator':
                 return 'bg-red-100 text-red-800';
-            case 'Developer':
+            case 'developer':
                 return 'bg-blue-100 text-blue-800';
             default:
                 return 'bg-gray-100 text-gray-800';
@@ -48,26 +53,38 @@ const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => 
         }));
     };
 
-    //TODO: toasti, validation
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true);
+        
         try {
             const result = await updateUser(user._id, editedUser);
 
-            if (result && result.modifiedCount > 0) {
-                const updatedUser = { ...user, ...editedUser };
-
-                setEditedUser(updatedUser);
-                await onUserUpdated();
-
-                closeModal();
+            if ('error' in result) {
+                toast({
+                    variant: "destructive",
+                    title: "Error updating user",
+                    description: result.error.message,
+                });
             } else {
-                console.warn('Update operation completed but no documents were modified');
+                await onUserUpdated();
+                closeModal();
+                toast({
+                    variant: "success",
+                    title: "Success",
+                    description: "User updated successfully",
+                });
             }
         } catch (error) {
-            console.error('Error updating user:', error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: error instanceof Error ? error.message : "An unexpected error occurred",
+            });
+        } finally {
+            setIsSubmitting(false);
         }
-        };
+    };
 
     const handleDelete = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,12 +95,28 @@ const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => 
 
         try {
             const result = await deleteUser(user._id);
-            console.log(result)
+            if (result.deletedCount > 0) {
+                await onUserUpdated();
+                toast({
+                    variant: "success",
+                    title: "Success",
+                    description: "User deleted successfully",
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Failed to delete user",
+                });
+            }
         } catch (error) {
-            console.error('Error updating user:', error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to delete user",
+            });
         }
-    }
-
+    };
 
     return (
     <div className="w-full max-w-md bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow duration-300">
@@ -201,6 +234,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => 
                                         onChange={handleInputChange}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         required
+                                        disabled={isSubmitting}
                                     />
                                 </div>
                                 <div>
@@ -215,6 +249,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => 
                                         onChange={handleInputChange}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         required
+                                        disabled={isSubmitting}
                                     />
                                 </div>
                             </div>
@@ -231,6 +266,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => 
                                     onChange={handleInputChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     required
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
@@ -246,6 +282,21 @@ const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => 
                                     onChange={handleInputChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     required
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                                    New Password (leave empty to keep current)
+                                </label>
+                                <input
+                                    type="password"
+                                    id="password"
+                                    name="password"
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
@@ -260,10 +311,11 @@ const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => 
                                     onChange={handleInputChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     required
+                                    disabled={isSubmitting}
                                 >
-                                    <option value="User">User</option>
-                                    <option value="Developer">Developer</option>
-                                    <option value="Administrator">Administrator</option>
+
+                                    <option value={UserRole.ADMINISTRATOR}>Administrator</option>
+                                    <option value={UserRole.DEVELOPER}>Developer</option>
                                 </select>
                             </div>
                         </div>
@@ -273,14 +325,16 @@ const UserCard: React.FC<UserCardProps> = ({ user, onUserUpdated, isAdmin }) => 
                                 type="button"
                                 onClick={closeModal}
                                 className="px-4 py-2 bg-gray-200 text-gray-800 text-sm font-medium rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition-colors"
+                                disabled={isSubmitting}
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors"
+                                className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isSubmitting}
                             >
-                                Save Changes
+                                {isSubmitting ? 'Saving...' : 'Save Changes'}
                             </button>
                         </div>
                     </form>

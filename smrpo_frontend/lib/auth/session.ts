@@ -49,6 +49,7 @@ export async function getSession(): Promise<Session | null> {
         ]);
         
         if (!user) {
+            console.error('User not found for session token:', sessionToken);
             return null;
         }
 

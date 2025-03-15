@@ -40,15 +40,20 @@ export function useUser({
 
   useEffect(() => {
     let mounted = true;
+    console.log('Mounted:', mounted);
 
     const fetchUser = async () => {
       try {
         const data = await getSession();
+
+        console.log('Data:', data);
         
         if (mounted) {
           if (data?.user) {
+            console.log('Setting user:', data.user);
             setUser(data.user);
           } else if (required) {
+            console.log('Redirecting to:', redirectTo);
             // Only redirect if authentication is required
             router.push(`${redirectTo}?from=${encodeURIComponent(window.location.pathname)}`);
           }

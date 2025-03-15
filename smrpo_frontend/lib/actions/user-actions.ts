@@ -6,7 +6,11 @@ import {genSalt, hash} from "bcrypt-ts";
 import {User, UserNoId, UserRole} from "../types/user-types";
 import {ObjectId} from "mongodb";
 import { validateUser, userSchema } from '../validations/auth-validations';
+import { AppError, createErrorResponse } from '@/lib/utils/error-handling';
+import { ZodError } from 'zod';
+import type { ErrorResponse } from '@/lib/utils/error-handling';
 
+export type { User };
 
 // Get all users
 export async function getUsers() {
@@ -71,101 +75,191 @@ export async function addUser(userData: UserNoId) {
 // Get user by ID
 export async function getUserById(id: string) {
     const { db } = await connectToDatabase();
-    const user = await db().collection('users').findOne({ _id: id });
-    return user ? JSON.parse(JSON.stringify(user)) : null;
+    const user = await db().collection('users').findOne({ _id: new ObjectId(id) });
+    if (!user) return null;
+    
+    // Convert string date back to Date object
+    return {
+        ...JSON.parse(JSON.stringify(user)),
+        createdAt: new Date(user.createdAt)
+    };
 }
 
 // Update user
-export async function updateUser(id: string, userData: Partial<User>) {
-    console.log(userData)
-    const { db } = await connectToDatabase();
+export async function updateUser(id: string, userData: Partial<User>): Promise<{ success: true } | ErrorResponse> {
+    try {
+        const { db } = await connectToDatabase();
+        const { _id, ...updateData } = userData;
 
-    const { _id, ...updateData } = userData;
+        // Get current user data
+        const currentUser = await getUserById(id);
+        if (!currentUser) {
+            throw new AppError("User not found", 404, "NotFoundError");
+        }
 
-    const result = await db().collection('users').updateOne(
-        { _id: new ObjectId(id) },
-        { $set: updateData }
-    );
+        // Check for duplicate username
+        if (updateData.userName && updateData.userName !== currentUser.userName) {
+            const duplicateUser = await db().collection('users').findOne({ userName: updateData.userName });
+            if (duplicateUser) {
+                throw new AppError("Username already exists", 400, "ValidationError");
+            }
+        }
 
+        // Check for duplicate email
+        if (updateData.email && updateData.email !== currentUser.email) {
+            const duplicateEmail = await db().collection('users').findOne({ email: updateData.email });
+            if (duplicateEmail) {
+                throw new AppError("Email already exists", 400, "ValidationError");
+            }
+        }
 
-    revalidatePath('/users');
-    return result;
+        // Create merged object for validation
+        const mergedData = {
+            ...currentUser,
+            ...updateData,
+            // Ensure createdAt is a Date object
+            createdAt: currentUser.createdAt instanceof Date ? currentUser.createdAt : new Date(currentUser.createdAt)
+        };
+
+        // Validate the updated data using Zod schema
+        try {
+            userSchema.parse(mergedData);
+        } catch (error) {
+            if (error instanceof ZodError) {
+                const validationErrors = error.errors.map(err => ({
+                    field: err.path[0],
+                    message: err.message
+                }));
+                throw new AppError(
+                    validationErrors[0].message,
+                    400,
+                    'ValidationError',
+                    validationErrors
+                );
+            }
+            throw error;
+        }
+
+        // If password is being updated, ensure it's hashed
+        if (updateData.password && !updateData.password.startsWith('$2')) {
+            const salt = await genSalt(10);
+            updateData.password = await hash(updateData.password, salt);
+        }
+
+        const result = await db().collection('users').updateOne(
+            { _id: new ObjectId(id) },
+            { $set: updateData }
+        );
+
+        if (result.matchedCount === 0) {
+            throw new AppError("User not found", 404, "NotFoundError");
+        }
+
+        revalidatePath('/dashboard/admin/user_managment');
+        return { success: true };
+    } catch (error) {
+        return createErrorResponse(error);
+    }
 }
 
-
 // Handle user update form submission
-export async function handleUpdateUser(formData: FormData, userId: string) {
-    const { db } = await connectToDatabase();
+export async function handleUpdateUser(formData: FormData, userId: string): Promise<{ success: true } | ErrorResponse> {
+    try {
+        const { db } = await connectToDatabase();
 
-    // Retrieve the current user data
-    const currentUser = await getUserById(userId);
-    if (!currentUser) {
-        throw new Error("User not found");
-    }
-
-    // Prepare update data object
-    const updateData: Partial<User> = {};
-
-    // Check and update username (prevent duplicates)
-    const newUserName = formData.get("userName") as string;
-    if (newUserName && newUserName !== currentUser.userName) {
-        const duplicate = await db().collection('users').findOne({ userName: newUserName });
-        if (duplicate) {
-            throw new Error("Username already exists");
+        // Retrieve the current user data
+        const currentUser = await getUserById(userId);
+        if (!currentUser) {
+            throw new AppError("User not found", 404, "NotFoundError");
         }
-        updateData.userName = newUserName;
-    }
 
-    // Update other personal details
-    const firstName = formData.get("firstName") as string;
-    if (firstName) {
-        updateData.firstName = firstName;
-    }
-    const lastName = formData.get("lastName") as string;
-    if (lastName) {
-        updateData.lastName = lastName;
-    }
-    const email = formData.get("email") as string;
-    if (email) {
-        updateData.email = email;
-    }
+        // Prepare update data object
+        const updateData: Partial<User> = {};
 
-    // Create merged object for validation
-    const validationData = {
-        ...currentUser,
-        ...updateData
-    };
+        // Get form values
+        const newUserName = formData.get("userName") as string;
+        const firstName = formData.get("firstName") as string;
+        const lastName = formData.get("lastName") as string;
+        const email = formData.get("email") as string;
+        const role = formData.get("role") as UserRole;
+        const newPassword = formData.get("password") as string;
 
-    // Check and update password if provided - after initial validation
-    const newPassword = formData.get("password") as string;
-    if (newPassword) {
-        validationData.password = newPassword;
-        // Validate with the new unhashed password
+        // Only include fields that have changed
+        if (newUserName && newUserName !== currentUser.userName) {
+            updateData.userName = newUserName;
+        }
+        if (firstName && firstName !== currentUser.firstName) {
+            updateData.firstName = firstName;
+        }
+        if (lastName && lastName !== currentUser.lastName) {
+            updateData.lastName = lastName;
+        }
+        if (email && email !== currentUser.email) {
+            updateData.email = email;
+        }
+        if (role && role !== currentUser.role) {
+            updateData.role = role;
+        }
+
+        // Create merged object for validation
+        const validationData = {
+            ...currentUser,
+            ...updateData,
+            // Ensure createdAt is a Date object
+            createdAt: currentUser.createdAt instanceof Date ? currentUser.createdAt : new Date(currentUser.createdAt)
+        };
+
+        // Validate the updated data using Zod schema
         try {
-            validateUser(validationData);
+            userSchema.parse(validationData);
         } catch (error) {
-            if (error instanceof Error) {
-                throw new Error(`Validation error: ${error.message}`);
+            if (error instanceof ZodError) {
+                const validationErrors = error.errors.map(err => ({
+                    field: err.path[0],
+                    message: err.message
+                }));
+                throw new AppError(
+                    validationErrors[0].message,
+                    400,
+                    'ValidationError',
+                    validationErrors
+                );
             }
             throw error;
         }
-        // Only hash password after validation
-        const salt = await genSalt(10);
-        updateData.password = await hash(newPassword, salt);
-    } else {
-        // Validate without password change
-        try {
-            validateUser(validationData);
-        } catch (error) {
-            if (error instanceof Error) {
-                throw new Error(`Validation error: ${error.message}`);
-            }
-            throw error;
-        }
-    }
 
-    // Execute the update operation
-    return await updateUser(userId, updateData);
+        // Handle password update separately
+        if (newPassword) {
+            // Validate with the new unhashed password
+            try {
+                userSchema.parse({
+                    ...validationData,
+                    password: newPassword
+                });
+                // Only hash password after validation
+                const salt = await genSalt(10);
+                updateData.password = await hash(newPassword, salt);
+            } catch (error) {
+                if (error instanceof ZodError) {
+                    const validationErrors = error.errors.map(err => ({
+                        field: err.path[0],
+                        message: err.message
+                    }));
+                    throw new AppError(
+                        validationErrors[0].message,
+                        400,
+                        'ValidationError',
+                        validationErrors
+                    );
+                }
+                throw error;
+            }
+        }
+
+        return await updateUser(userId, updateData);
+    } catch (error) {
+        return createErrorResponse(error);
+    }
 }
 
 // Delete user
