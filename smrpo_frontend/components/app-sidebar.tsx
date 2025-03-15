@@ -11,6 +11,7 @@ import {
   Map,
   PieChart,
   Settings2,
+  ShieldUser,
   SquareTerminal,
 } from "lucide-react"
 
@@ -46,14 +47,7 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
             title: "Overview",
             url: "/dashboard",
           },
-          {
-            title: "Analytics",
-            url: "/dashboard/analytics",
-          },
-          {
-            title: "Settings",
-            url: "/dashboard/settings",
-          },
+         
         ],
       },
       {
@@ -75,46 +69,43 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
           },
         ],
       },
+      // {
+      //   title: "Documentation",
+      //   url: "/dashboard/docs",
+      //   icon: BookOpen,
+      //   items: [
+      //     {
+      //       title: "Project Wiki",
+      //       url: "/dashboard/docs/wiki",
+      //     },
+      //     {
+      //       title: "Guidelines",
+      //       url: "/dashboard/docs/guidelines",
+      //     },
+      //     {
+      //       title: "API Docs",
+      //       url: "/dashboard/docs/api",
+      //     },
+      //   ],
+      // },
       {
-        title: "Documentation",
-        url: "/dashboard/docs",
-        icon: BookOpen,
-        items: [
-          {
-            title: "Project Wiki",
-            url: "/dashboard/docs/wiki",
-          },
-          {
-            title: "Guidelines",
-            url: "/dashboard/docs/guidelines",
-          },
-          {
-            title: "API Docs",
-            url: "/dashboard/docs/api",
-          },
-        ],
-      },
-      {
-        title: "Settings",
+        title: "Project Settings",
         url: "/dashboard/settings",
         icon: Settings2,
         items: [
-          {
-            title: "Project Settings",
-            url: projectId ? `/dashboard/project/${projectId}/settings` : "/dashboard/settings/project",
-          },
+          // {
+          //   title: "Project Settings",
+          //   url: projectId ? `/dashboard/project/${projectId}/settings` : "/dashboard/settings/project",
+          // },
           {
             title: "Team Members",
             url: projectId ? `/dashboard/project/${projectId}/settings/team` : "/settings/team",
           },
-          {
-            title: "Permissions",
-            url: projectId ? `/dashboard/project/${projectId}/settings/permissions` : "/dashboard/settings/permissions",
-          },
-          {
-            title: "User Settings",
-            url: "/profile",
-          },
+          // {
+          //   title: "Permissions",
+          //   url: projectId ? `/dashboard/project/${projectId}/settings/permissions` : "/dashboard/settings/permissions",
+          // },
+          
         ],
       },
     ],
@@ -129,11 +120,11 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
         url: "/dashboard/boards/backlog",
         icon: PieChart,
       },
-      {
-        name: "Roadmap",
-        url: "/dashboard/boards/roadmap",
-        icon: Map,
-      },
+      // {
+      //   name: "Roadmap",
+      //   url: "/dashboard/boards/roadmap",
+      //   icon: Map,
+      // },
     ],
   };
 
@@ -141,20 +132,20 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
     navItems.navMain.push({
       title: "Admin",
       url: "/dashboard/admin",
-      icon: Settings2,
+      icon: ShieldUser,
       items: [
         {
           title: "User Management",
           url: "/dashboard/admin/user_managment",
         },
-        {
-          title: "System Settings",
-          url: "/dashboard/admin/system_settings",
-        },
-        {
-          title: "Audit Logs",
-          url: "/dashboard/admin/audit_logs",
-        },
+        // {
+        //   title: "System Settings",
+        //   url: "/dashboard/admin/system_settings",
+        // },
+        // {
+        //   title: "Audit Logs",
+        //   url: "/dashboard/admin/audit_logs",
+        // },
       ],
     });
   }
