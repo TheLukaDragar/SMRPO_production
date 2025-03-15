@@ -5,7 +5,7 @@ import { Draggable } from "@hello-pangea/dnd";
 import {UserStory} from "@/lib/types/user-story-types";
 
 interface UserStoryCardProps {
-    ID: number;
+    ID: string;
     draggableId: string;
     index: number;
     storyData: UserStory;
