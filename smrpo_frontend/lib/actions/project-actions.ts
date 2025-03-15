@@ -341,4 +341,20 @@ export async function removeProjectMember(projectId: string, userId: string) {
     } catch (error) {
         throw new Error(`Failed to remove member: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-} 
+}
+
+// Get project members
+export async function getProjectMembers(projectId: string) {
+    try {
+        if (!projectId) throw new Error('Project ID is required');
+
+        const { db } = await connectToDatabase();
+        const project = await db().collection('projects').findOne({ _id: new ObjectId(projectId) });
+        if (!project) {
+            throw new Error('Project not found');
+        }
+        return project.members;
+    } catch (error) {
+        return createErrorResponse(error);
+    }
+}

@@ -1,7 +1,8 @@
 'use server';
 
 import {connectToDatabase} from "@/lib/db/connection";
-import {UserStoryNoId} from "@/lib/types/user-story-types";
+import {UserStoryNoId, UserStory} from "@/lib/types/user-story-types";
+import {ObjectId} from "mongodb";
 
 
 // Get all user stories
@@ -14,17 +15,34 @@ export async function getAllUserStories() {
 //add Story
 export async function addStory(story: UserStoryNoId) {
     const { db } = await connectToDatabase();
-    const result = await db().collection('userStory').insertOne({
-        ...story,
-        createdAt: new Date(),
-    });
+    const result = await db().collection('userStory').insertOne(story);
 
-    return result;
+    return {
+        acknowledged: result.acknowledged,
+        insertedId: result.insertedId.toString(),
+    };
+}
+
+export async function updateStory(story: UserStory) {
+    const { db } = await connectToDatabase();
+    const { _id, ...storyToUpdate } = story;
+
+    const objectId = new ObjectId(_id);
+
+    const result = await db().collection('userStory').updateOne(
+        { _id: objectId },
+        { $set: storyToUpdate }
+    );
+
+    return {
+        acknowledged: result.acknowledged,
+        modifiedCount: result.modifiedCount,
+    };
 }
 
 //TODO: TO JE ZACASNO
 export async function getAllSprints() {
     const { db } = await connectToDatabase();
-    const users = await db().collection('sprint').find({}).toArray();
-    return JSON.parse(JSON.stringify(users));
+    const sprints = await db().collection('sprint').find({}).toArray();
+    return JSON.parse(JSON.stringify(sprints));
 }

@@ -6,37 +6,39 @@ import UserStoryCard from "@/components/userStoryCard";
 import { UserStory } from "@/lib/types/user-story-types";
 import {useUser} from "@/lib/hooks/useUser";
 import {User} from "@/lib/types/user-types";
-
+import {addStory} from "@/lib/actions/user-story-actions";
 
 interface StoryTableProps {
     droppableId: string;
     title: string;
     items: UserStory[];
+    projectUsers: User[];
+    setItems: React.Dispatch<React.SetStateAction<UserStory[]>>;
 }
-
-const StoryTable: React.FC<StoryTableProps> = ({ droppableId, title, items }) => {
+const StoryTable: React.FC<StoryTableProps> = ({ droppableId, title, items, projectUsers, setItems }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [projectUsers, setProjectUsers] = useState<User[]>([]);
 
 
     const [newUserStory, setNewUserStory] = useState({
         title: "",
         description: "",
-        owner: {userName: "",
-                firstName: "",
-                lastName: "",
-                email: "",
-                password: "",
-                role: "User"} as User,
+        owner: {
+            userName: "",
+            firstName: "",
+            lastName: "",
+            email: "",
+            password: "",
+            role: "User"
+        } as unknown as User,
         priority: "",
         storyPoints: 0,
-        dueDate: null,
-        sprintID: "",
-        SprintPosition: "",
-        createdAt: null
+        dueDate: new Date(),
+        sprintID: droppableId.split("-")[0],
+        SprintPosition: droppableId.split("-")[1],
+        createdAt: new Date(),
     });
 
 
@@ -46,15 +48,30 @@ const StoryTable: React.FC<StoryTableProps> = ({ droppableId, title, items }) =>
         setIsAdmin(user?.role === "Administrator")
     }, [user]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
+        setError("");
         setIsSubmitting(true);
 
+        const updatedUserStory = {
+            ...newUserStory,
+            createdAt: new Date()
+        };
+
+        const newStoryId = await addStory(updatedUserStory);
+
+        const updatedUserStoryId = {
+            _id: newStoryId.insertedId,
+            ...newUserStory
+        };
+
+        setItems([...items, updatedUserStoryId]);
+
+
         try {
-            // Add new user story
             setIsModalOpen(false);
+            console.log(newUserStory);
         } catch (error) {
-            //setError(error.message);
+            setError(error.message);
         } finally {
             setIsSubmitting(false);
         }
@@ -158,16 +175,76 @@ const StoryTable: React.FC<StoryTableProps> = ({ droppableId, title, items }) =>
                                     <select
                                         id="owner"
                                         name="owner"
-                                        value={newUserStory.owner as User}
+                                        value={newUserStory.owner?._id || ""}
+                                        onChange={(e) => {
+                                            const selectedUser = projectUsers.find(user => user._id === e.target.value);
+                                            setNewUserStory({ ...newUserStory, owner: selectedUser || {} as User });
+                                        }}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                    >
+                                        {projectUsers.map((user) => (
+                                            <option key={user._id} value={user._id}>
+                                                {user.userName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="priority" className="block text-sm font-medium text-gray-700">
+                                        Priority
+                                    </label>
+                                    <select
+                                        id="priority"
+                                        name="priority"
+                                        value={newUserStory.priority}
                                         onChange={handleInputChange}
                                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                     >
-                                        <option value="User">User</option>
-                                        <option value="Developer">Developer</option>
-                                        <option value="Administrator">Administrator</option>
+                                        <option value="">Select priority</option>
+                                        <option value="High">High</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="Low">Low</option>
                                     </select>
                                 </div>
-
+                                <div>
+                                    <label htmlFor="storyPoints" className="block text-sm font-medium text-gray-700">
+                                        Story Points
+                                    </label>
+                                    <input
+                                        type="number"
+                                        id="storyPoints"
+                                        name="storyPoints"
+                                        value={newUserStory.storyPoints}
+                                        onChange={handleInputChange}
+                                        min="0"
+                                        list="storypoints-options"
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                    />
+                                    <datalist id="storypoints-options">
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="5">5</option>
+                                        <option value="8">8</option>
+                                        <option value="13">13</option>
+                                        <option value="20">20</option>
+                                        <option value="40">40</option>
+                                        <option value="100">100</option>
+                                    </datalist>
+                                </div>
+                                <div>
+                                    <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">
+                                        Due Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        id="dueDate"
+                                        name="dueDate"
+                                        value={newUserStory.dueDate ? new Date(newUserStory.dueDate).toISOString().split('T')[0] : ''}
+                                        onChange={handleInputChange}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                    />
+                                </div>
                             </div>
 
                             <div className="mt-6 flex justify-end space-x-3">

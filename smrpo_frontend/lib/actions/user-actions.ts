@@ -85,6 +85,29 @@ export async function getUserById(id: string) {
     };
 }
 
+export async function getUsersByIds(ids: string[] | string) {
+    const { db } = await connectToDatabase();
+
+    const idsArray = Array.isArray(ids) ? ids : [ids];
+
+    if (idsArray.length === 0) {
+        throw new Error('No IDs provided');
+    }
+
+    const objectIds = idsArray.map(id => new ObjectId(id));
+
+    const usersFromDb = await db().collection('users').find({
+        _id: { $in: objectIds }
+    }).toArray();
+
+    const users = usersFromDb.map((user:User) => ({
+        ...user,
+        _id: user._id.toString(),
+    }));
+
+    return users;
+}
+
 // Update user
 export async function updateUser(id: string, userData: Partial<User>): Promise<{ success: true } | ErrorResponse> {
     try {
