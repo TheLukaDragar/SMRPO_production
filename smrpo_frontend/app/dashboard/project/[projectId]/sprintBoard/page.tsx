@@ -1,23 +1,24 @@
 "use client"
-import React, {useCallback, useEffect, useState} from "react";
-import {DragDropContext, Droppable, DropResult} from "@hello-pangea/dnd";
+import React, { useCallback, useEffect, useState } from "react";
+import { DragDropContext, Droppable, DropResult } from "@hello-pangea/dnd";
 import UserStoryCard from "@/components/userStoryCard";
-import {UserStory} from "@/lib/types/user-story-types";
-import {User} from "@/lib/types/user-types";
-import {getAllUserStories, getAllSprints, updateStory} from "@/lib/actions/user-story-actions";
+import { UserStory } from "@/lib/types/user-story-types";
+import { User } from "@/lib/types/user-types";
+import { getAllUserStories, getAllSprints, updateStory } from "@/lib/actions/user-story-actions";
 import StoryTable from "@/components/story-table";
-import {sprint} from "@/lib/types/sprint-types";
-import {useProject} from "@/lib/contexts/project-context";
-import {getProjectMembers} from "@/lib/actions/project-actions";
-import {getUsersByIds} from "@/lib/actions/user-actions";
+import { sprint } from "@/lib/types/sprint-types";
+import { useProject } from "@/lib/contexts/project-context";
+import { getProjectMembers } from "@/lib/actions/project-actions";
+import { getUsersByIds } from "@/lib/actions/user-actions";
+import { TimeLoggingPopup } from '@/components/TimeLoggingPopup';
 
 export default function DNDPage() {
     const [isRefetching, setIsRefetching] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [stories, setStories] = useState<UserStory[]>([]);
     const [columns, setColumns] = useState<sprint[]>([]);
     const [projectUsers, setProjectUsers] = useState<User[]>([]);
-    const {activeProject, loading, refreshProjects } = useProject();
+    const { activeProject, loading, refreshProjects } = useProject();
+    const [selectedStory, setSelectedStory] = useState<UserStory | null>(null);
 
     const fetchProjectUsers = useCallback(async () => {
         try {
@@ -26,20 +27,21 @@ export default function DNDPage() {
             console.log('Users JSON:', JSON.stringify(users));
             const usr_ids = users.map((user) => user.userId);
             console.log("usr_ids: ", usr_ids);
-
             await fetchUserData(usr_ids);
         } catch (error) {
             console.error("Error fetching project users:", error);
         } finally {
             setIsRefetching(false);
         }
-    }, []);
+    }, [activeProject]);
 
     const fetchSprints = useCallback(async () => {
         try {
             setIsRefetching(true);
             const sprints = await getAllSprints();
-            const activeSprints = sprints.filter(sprint => sprint.isActive === true && sprint.projectId === activeProject?._id);
+            const activeSprints = sprints.filter(
+                sprint => sprint.isActive === true && sprint.projectId === activeProject?._id
+            );
             setColumns(activeSprints);
             console.log(sprints);
         } catch (error) {
@@ -47,13 +49,13 @@ export default function DNDPage() {
         } finally {
             setIsRefetching(false);
         }
-    }, []);
+    }, [activeProject]);
 
     const fetchStories = useCallback(async () => {
         try {
             setIsRefetching(true);
-            const stories = await getAllUserStories();
-            setStories(stories);
+            const storiesData = await getAllUserStories();
+            setStories(storiesData);
         } catch (error) {
             console.error("Error fetching stories:", error);
         } finally {
@@ -79,10 +81,8 @@ export default function DNDPage() {
         console.log("project users: ", projectUsers);
     }, [projectUsers]);
 
-
     useEffect(() => {
         if (!activeProject?._id) return;
-
         fetchStories();
         fetchSprints();
         fetchProjectUsers();
@@ -95,30 +95,31 @@ export default function DNDPage() {
 
         if (storyIndex !== -1) {
             const updatedStories = [...stories];
-
             const [sprintId, sprintPart] = result.destination.droppableId.split('-');
-
             updatedStories[storyIndex] = {
                 ...updatedStories[storyIndex],
                 sprintID: sprintId,
                 SprintPosition: sprintPart
             };
-
             setStories(updatedStories);
-            updateStory(updatedStories[storyIndex])
+            updateStory(updatedStories[storyIndex]);
         }
-    }
+    };
+
+    const handleTimeSave = (loggedTime: number) => {
+        console.log(`User story ${selectedStory?._id} logged time: ${loggedTime} hours`);
+        // Here you can add the logic to persist logged time.
+        setSelectedStory(null);
+    };
 
     return (
         <DragDropContext onDragEnd={handleDragEnd}>
             <div className="p-6 bg-gray-100 min-h-screen">
                 <h1 className="text-2xl font-bold mb-6 text-gray-800">Project Planning Board</h1>
-
                 <div className="flex space-x-8 overflow-x-auto pb-4">
                     {columns.map((sprint) => (
                         <div key={sprint._id} className="flex-none">
                             <h2 className="mb-4">{sprint.sprintName}</h2>
-
                             <div className="flex space-x-4 overflow-x-auto">
                                 {sprint.sprintParts && sprint.sprintParts.map((part) => (
                                     <StoryTable
@@ -134,8 +135,32 @@ export default function DNDPage() {
                         </div>
                     ))}
                 </div>
+
+                {/* Time Logging Section */}
+                <div className="mt-6">
+                    <h2 className="text-xl font-bold mb-4">Time Logging</h2>
+                    {stories.map(story => (
+                        <div key={story._id} className="flex items-center justify-between p-2 border mb-2 bg-white rounded">
+                            <span>{story.title}</span>
+                            <button
+                                onClick={() => setSelectedStory(story)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded"
+                            >
+                                Log Time
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                {selectedStory && (
+                    <TimeLoggingPopup
+                        userStoryId={selectedStory._id}
+                        title={selectedStory.title}
+                        onClose={() => setSelectedStory(null)}
+                        onSave={handleTimeSave}
+                    />
+                )}
             </div>
         </DragDropContext>
-
     );
 }
