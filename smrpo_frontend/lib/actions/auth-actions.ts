@@ -129,13 +129,13 @@ export async function register(formData: FormData): Promise<{ success: true } | 
 export async function logout() {
     try {
         const sessionToken = (await cookies()).get('session_token')?.value;
-        
+
         if (sessionToken) {
             const { db } = await connectToDatabase();
             await db().collection('sessions').deleteOne({ token: sessionToken });
             (await cookies()).delete('session_token');
         }
-        
+
         redirect('/login');
     } catch (error) {
         console.error('Error during logout:', error);
@@ -146,7 +146,7 @@ export async function logout() {
 async function createSession(userId: string): Promise<string> {
     const { db } = await connectToDatabase();
     const token = generateSessionToken();
-    
+
     await db().collection('sessions').insertOne({
         token,
         userId,

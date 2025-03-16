@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { updateProject } from "@/lib/actions/project-actions"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,48 +28,65 @@ interface ProjectEditDialogProps {
 export function ProjectEditDialog({ project, open, onOpenChange }: ProjectEditDialogProps) {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [estimatedTime, setEstimatedTime] = useState<number | "">(project?.estimated_time ?? "");
+
+  useEffect(() => {
+    if (project && typeof project.estimated_time === "number") {
+      setEstimatedTime(project.estimated_time);
+    } else {
+      setEstimatedTime(""); // Ensure it's empty instead of undefined
+    }
+  }, [project]);
+
+
+
+
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setError(null)
-    setIsSubmitting(true)
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
 
     try {
-      const formData = new FormData(e.currentTarget)
+      const formData = new FormData(e.currentTarget);
       const updatedData = {
-        name: formData.get('name') as string,
-        description: formData.get('description') as string || undefined,
-      }
+        name: formData.get("name") as string,
+        description: formData.get("description") as string || undefined,
+        estimated_time: estimatedTime !== "" ? parseInt(estimatedTime.toString(), 10) : 0,
+      };
 
-      const result = await updateProject(project._id, updatedData)
+      console.log("Submitting updated project:", updatedData);
 
-      if ('error' in result) {
-        setError(result.error.message)
+      const result = await updateProject(project._id, updatedData);
+
+      if ("error" in result) {
+        setError(result.error.message);
         toast({
           variant: "destructive",
           title: "Error updating project",
           description: result.error.message,
-        })
+        });
       } else {
-        onOpenChange(false)
+        onOpenChange(false);
         toast({
           variant: "success",
           title: "Project updated",
           description: "Your changes have been saved successfully.",
-        })
+        });
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.")
+      setError("An unexpected error occurred. Please try again.");
       toast({
         variant: "destructive",
         title: "Error updating project",
         description: "An unexpected error occurred. Please try again.",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -111,6 +128,26 @@ export function ProjectEditDialog({ project, open, onOpenChange }: ProjectEditDi
                 defaultValue={project.description}
                 className="col-span-3"
                 maxLength={500}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="estimated_time" className="block text-sm font-medium text-gray-700">
+                Estimated Time (hours)
+              </label>
+              <input
+                id="estimated_time"
+                name="estimated_time"
+                type="number"
+                placeholder="0"
+                className="w-16 p-1 text-center border rounded-md"
+                min="0"
+                max="99"
+                value={estimatedTime}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (value.length > 2) value = value.slice(0, 2);
+                  setEstimatedTime(value ? parseInt(value, 10) : "");
+                }}
               />
             </div>
           </div>

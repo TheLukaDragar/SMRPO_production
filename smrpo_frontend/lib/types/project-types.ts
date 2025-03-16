@@ -30,5 +30,6 @@ export interface Project {
     boards: Board[];
     members: ProjectMember[];
     createdAt: Date;
+    estimated_time: number;
 }
 
