@@ -276,7 +276,7 @@ export default function DashboardPage() {
                         )}
 
                         {/* Show "Leave Project" only if the user is a project member */}
-                        {project.members && project.members.some((member: { userId: string; role: string }) => member.userId === user._id) && (//ignore error
+                        {user && project.members && project.members.some((member: { userId: string; role: string }) => member.userId === user._id) && (
                           <DropdownMenuItem onClick={() => handleLeaveProject(project._id)}>
                             <UserX className="h-4 w-4 mr-2" />
                             Leave Project
