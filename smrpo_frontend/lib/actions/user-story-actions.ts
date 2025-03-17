@@ -75,3 +75,16 @@ export async function updateSprint(SprintToUpdate: sprint) {
     };
 }
 
+// New function for logging time for a user story
+export async function logTimeForUserStory(storyId: string, time: number) {
+    const { db } = await connectToDatabase();
+    const objectId = new ObjectId(storyId);
+    const result = await db().collection('userStory').updateOne(
+        { _id: objectId },
+        { $inc: { loggedTime: time } }
+    );
+    return {
+        acknowledged: result.acknowledged,
+        modifiedCount: result.modifiedCount,
+    };
+}
