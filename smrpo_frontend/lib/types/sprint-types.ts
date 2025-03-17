@@ -5,3 +5,10 @@ export interface sprint {
     sprintParts: [];
     isActive: boolean;
 }
+
+export interface sprintNoId {
+    sprintName: string;
+    projectId: string;
+    sprintParts: [];
+    isActive: boolean;
+}

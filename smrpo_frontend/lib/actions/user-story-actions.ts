@@ -2,6 +2,7 @@
 
 import {connectToDatabase} from "@/lib/db/connection";
 import {UserStoryNoId, UserStory} from "@/lib/types/user-story-types";
+import {sprint, sprintNoId} from "@/lib/types/sprint-types";
 import {ObjectId} from "mongodb";
 
 
@@ -46,3 +47,31 @@ export async function getAllSprints() {
     const sprints = await db().collection('sprint').find({}).toArray();
     return JSON.parse(JSON.stringify(sprints));
 }
+
+export async function newSprint(SprintToInsert: sprintNoId) {
+    const { db } = await connectToDatabase();
+    const result = await db().collection('sprint').insertOne(SprintToInsert);
+
+    return {
+        acknowledged: result.acknowledged,
+        insertedId: result.insertedId.toString(),
+    };
+}
+
+export async function updateSprint(SprintToUpdate: sprint) {
+    const { db } = await connectToDatabase();
+    const { _id, ...sprint_1 } = SprintToUpdate;
+
+    const objectId = new ObjectId(_id);
+
+    const result = await db().collection('sprint').updateOne(
+        { _id: objectId },
+        { $set: sprint_1 }
+    );
+
+    return {
+        acknowledged: result.acknowledged,
+        modifiedCount: result.modifiedCount,
+    };
+}
+
