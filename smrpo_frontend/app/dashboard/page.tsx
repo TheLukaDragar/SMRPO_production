@@ -22,6 +22,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useProject } from '@/lib/contexts/project-context';
+import { UserX } from "lucide-react";
+import { UserPlus } from "lucide-react";
+import { leaveProject } from "@/lib/actions/project-actions";
+import { becomeProductOwner } from "@/lib/actions/project-actions";
+
+
+
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -29,6 +36,9 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const { user } = useUser();
   const { activeProject, projects, loading, error: contextError, refreshProjects } = useProject();
+  useEffect(() => {
+    console.log("Fetched projects:", projects);
+  }, [projects]);
   const [error, setError] = useState<ErrorResponse['error'] | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [projectFormOpen, setProjectFormOpen] = useState(false);
@@ -65,6 +75,80 @@ export default function DashboardPage() {
       refreshProjects();
     }
   };
+
+  const handleLeaveProject = async (projectId: string) => {
+    if (!user || !user._id) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to leave a project.",
+      });
+      return;
+    }
+
+    try {
+      const response = await leaveProject(projectId, user._id);
+      if ('success' in response && response.success) {
+        toast({
+          variant: "success",
+          title: "Left Project",
+          description: "You have successfully left the project.",
+        });
+        refreshProjects();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: 'error' in response ? response.error.message : "An unknown error occurred.",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not leave the project. Please try again.",
+      });
+    }
+  };
+
+  const handleBecomeProductOwner = async (projectId: string) => {
+    if (!user || !user._id) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to take this role.",
+      });
+      return;
+    }
+
+    try {
+      const response = await becomeProductOwner(projectId, user._id);
+
+      if (response.success) {
+        toast({
+          variant: "success",
+          title: "Role Updated",
+          description: "You are now the Product Owner and a project member.",
+        });
+        refreshProjects();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: response.error || "An unknown error occurred.",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not update role. Please try again.",
+      });
+    }
+  };
+
+
+
 
   const handleDeleteProject = async (projectId: string) => {
     if (!isAdmin) {
@@ -110,7 +194,7 @@ export default function DashboardPage() {
           </h1>
           <div className="flex gap-2">
             {isAdmin && (
-              <ProjectFormDialog 
+              <ProjectFormDialog
                 open={projectFormOpen}
                 onOpenChange={handleProjectFormOpenChange}
                 trigger={
@@ -134,7 +218,7 @@ export default function DashboardPage() {
             <AlertDescription>{error.message}</AlertDescription>
           </Alert>
         )}
-        
+
         <div className="grid gap-6">
           {projects.length === 0 ? (
             <div className="text-center py-8 bg-slate-50 rounded-lg">
@@ -153,54 +237,81 @@ export default function DashboardPage() {
                       </span>
                       {project.name}
                     </CardTitle>
-                    {isAdmin && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEditingProject(project)}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Edit
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+
+                        {/* Admin-Only Options */}
+                        {isAdmin && (
+                          <>
+                            <DropdownMenuItem onClick={() => setEditingProject(project)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => handleDeleteProject(project._id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
+
+                        {/* Show "Become Product Owner" if no current Product Owner */}
+                        {project.members && !project.members.some((member: { userId: string; role: string }) => member.role === "PRODUCT_OWNER") && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleBecomeProductOwner(project._id)}>
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Become Product Owner
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
+
+                        {/* Show "Leave Project" only if the user is a project member */}
+                        {user && project.members && project.members.some((member: { userId: string; role: string }) => member.userId === user._id) && (
+                          <DropdownMenuItem onClick={() => handleLeaveProject(project._id)}>
+                            <UserX className="h-4 w-4 mr-2" />
+                            Leave Project
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => handleDeleteProject(project._id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                        )}
+
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {project.description && (
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-sm text-muted-foreground mb-2">
                       {project.description}
                     </p>
                   )}
-                  {project.boards && project.boards.length > 0 ? (
-                    project.boards.map(board => (
-                      <div
-                        key={board.id}
-                        className="bg-slate-100 p-4 rounded-md mb-2 flex justify-between items-center"
-                      >
-                        <div className="text-sm font-medium">{board.name}</div>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="bg-slate-50 p-4 rounded-md text-center">
-                      <p className="text-sm text-muted-foreground">
-                        No boards yet. Create your first board!
-                      </p>
+
+                  {/* Display Estimated Time */}
+                  {project.estimated_time !== undefined && project.estimated_time !== 0 && (
+                    <p className="text-sm font-medium text-gray-700">
+                      Estimated Time: {project.estimated_time} hours
+                    </p>
+                  )}
+
+                  {/* Display Team Members Below Estimated Time */}
+                  {project.members && project.members.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-sm font-medium text-gray-700">Team Members:</p>
+                      <ul className="text-sm text-muted-foreground ml-2">
+                        {project.members.map((member: { userId: string; role: string }) => (
+                          <li key={member.userId}>
+                            {member.userId} - {member.role}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </CardContent>

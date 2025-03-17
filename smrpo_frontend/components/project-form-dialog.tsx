@@ -72,14 +72,15 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   const [selectedUsers, setSelectedUsers] = useState<SelectedUser[]>([])
   const [userPopoverOpen, setUserPopoverOpen] = useState(false)
+  const [estimatedTime, setEstimatedTime] = useState<number | "">("");
   const formRef = useRef<HTMLFormElement>(null)
   const { toast } = useToast()
-  
+
   // Determine if we're using external or internal state control
   const isControlled = externalOpen !== undefined;
   const open = isControlled ? externalOpen : internalOpen;
-  const setOpen = isControlled 
-    ? (newOpen: boolean) => externalOnOpenChange?.(newOpen) 
+  const setOpen = isControlled
+    ? (newOpen: boolean) => externalOnOpenChange?.(newOpen)
     : setInternalOpen;
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -110,9 +111,9 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
       setFilteredUsers(users)
       return
     }
-    
+
     const query = searchQuery.toLowerCase()
-    const filtered = users.filter(user => 
+    const filtered = users.filter(user =>
       user.userName.toLowerCase().includes(query) ||
       user.firstName.toLowerCase().includes(query) ||
       user.lastName.toLowerCase().includes(query)
@@ -127,7 +128,7 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
 
     try {
       const formData = new FormData(e.currentTarget)
-      
+
       // Add selected users to form data
       selectedUsers.forEach((selectedUser, index) => {
         formData.append(`members[${index}][userId]`, selectedUser.user._id)
@@ -149,13 +150,13 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
         setSelectedUsers([])
         setSearchQuery("")
         setError(null)
-        
+
         toast({
           variant: "success",
           title: "Success",
           description: "Project created successfully",
         })
-        
+
         // Close dialog last
         setOpen(false)
       }
@@ -171,9 +172,9 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
     if (!selectedUsers.some(selected => selected.user._id === user._id)) {
       // If no PRODUCT_OWNER exists yet, set this user as PRODUCT_OWNER
       const hasProductOwner = selectedUsers.some(selected => selected.role === ProjectRole.PRODUCT_OWNER);
-      setSelectedUsers([...selectedUsers, { 
-        user, 
-        role: hasProductOwner ? ProjectRole.DEVELOPER : ProjectRole.PRODUCT_OWNER 
+      setSelectedUsers([...selectedUsers, {
+        user,
+        role: hasProductOwner ? ProjectRole.DEVELOPER : ProjectRole.PRODUCT_OWNER
       }]);
     }
     setUserPopoverOpen(false)
@@ -200,16 +201,16 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
         return;
       }
     }
-    
+
     // If changing to PRODUCT_OWNER, remove other PRODUCT_OWNER
     if (role === ProjectRole.PRODUCT_OWNER) {
       setSelectedUsers(selectedUsers.map(selected => ({
         ...selected,
-        role: selected.user._id === userId ? role : 
-             (selected.role === ProjectRole.PRODUCT_OWNER ? ProjectRole.DEVELOPER : selected.role)
+        role: selected.user._id === userId ? role :
+          (selected.role === ProjectRole.PRODUCT_OWNER ? ProjectRole.DEVELOPER : selected.role)
       })));
     } else {
-      setSelectedUsers(selectedUsers.map(selected => 
+      setSelectedUsers(selectedUsers.map(selected =>
         selected.user._id === userId ? { ...selected, role } : selected
       ));
     }
@@ -276,6 +277,26 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
                         placeholder="Project description"
                         className="col-span-3"
                         maxLength={500}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <label htmlFor="estimated_time" className="block text-sm font-medium text-gray-700">
+                        Estimated Time (hours)
+                      </label>
+                      <input
+                        id="estimated_time"
+                        name="estimated_time"
+                        type="number"
+                        placeholder="0"
+                        className="w-16 p-1 text-center border rounded-md"
+                        min="0"
+                        max="99"
+                        value={estimatedTime}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                          if (value.length > 2) value = value.slice(0, 2);
+                          setEstimatedTime(value ? parseInt(value) : "");
+                        }}
                       />
                     </div>
                   </div>
@@ -374,7 +395,7 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
                                 <TableCell>
                                   <Select
                                     value={role}
-                                    onValueChange={(value: string) => 
+                                    onValueChange={(value: string) =>
                                       handleRoleChange(user._id, value as ProjectRole)
                                     }
                                   >

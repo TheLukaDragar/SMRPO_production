@@ -34,11 +34,11 @@ export function ProjectSwitcher() {
   const handleProjectSelect = (project: Project) => {
     console.log('Selecting project:', project._id);
     setActiveProject(project);
-    
+
     // Get the current path segments
     const pathSegments = pathname.split('/')
     const currentProjectIndex = pathSegments.findIndex(segment => segment === 'project')
-    
+
     if (currentProjectIndex !== -1 && pathSegments[currentProjectIndex + 1]) {
       // Replace the project ID in the current path
       pathSegments[currentProjectIndex + 1] = project._id
@@ -173,9 +173,6 @@ export function ProjectSwitcher() {
                   onClick={() => handleProjectSelect(project)}
                   className="gap-2 p-2"
                 >
-                  <div className="flex size-6 items-center justify-center rounded-xs border">
-                    <ChevronsUpDown className="size-4 shrink-0" />
-                  </div>
                   <div className="flex-1 truncate">
                     {project.name}
                     {project.description && (
@@ -183,12 +180,16 @@ export function ProjectSwitcher() {
                         {project.description}
                       </span>
                     )}
+                    {project.estimated_time !== undefined && project.estimated_time !== 0 && (
+                      <span className="block text-xs font-medium text-gray-700">
+                        Estimated Time: {project.estimated_time} hours
+                      </span>
+                    )}
                   </div>
-                  <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="gap-2 p-2 cursor-pointer"
                 onClick={handleViewProjectDetails}
               >
@@ -198,7 +199,7 @@ export function ProjectSwitcher() {
                 <div className="text-muted-foreground font-medium">Project details</div>
               </DropdownMenuItem>
               {isAdmin && (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="gap-2 p-2 cursor-pointer"
                   onClick={handleAddProjectClick}
                 >

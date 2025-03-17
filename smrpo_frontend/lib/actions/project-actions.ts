@@ -13,13 +13,22 @@ import { UserRole } from '../types/user-types';
 export async function getProjects(): Promise<Project[] | ErrorResponse> {
     try {
         const { db } = await connectToDatabase();
-        const projects = await db().collection('projects').find({}).toArray();
-        console.log(projects);
-        return JSON.parse(JSON.stringify(projects));
+        const projects = await db().collection("projects").find({}).toArray();
+
+        // Log the fetched projects before returning
+        console.log("Projects fetched from DB:", projects);
+
+        return projects.map((project: Project) => ({
+            ...project,
+            _id: project._id.toString(),
+            estimated_time: project.estimated_time ?? 0
+        }));
     } catch (error) {
         return createErrorResponse(error);
     }
 }
+
+
 
 //get my projects
 export async function getMyProjects(): Promise<Project[] | ErrorResponse> {
@@ -41,8 +50,8 @@ export async function getMyProjects(): Promise<Project[] | ErrorResponse> {
         }
 
         // Otherwise return only projects where user is a member
-        const projects = await db().collection('projects').find({ 
-            'members.userId': session.user._id 
+        const projects = await db().collection('projects').find({
+            'members.userId': session.user._id
         }).toArray();
         return JSON.parse(JSON.stringify(projects));
     } catch (error) {
@@ -60,7 +69,7 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
         }
 
         const projectName = formData.get('name') as string;
-        
+
         // Check for duplicate project name
         const { db } = await connectToDatabase();
         const existingProject = await db().collection('projects').findOne({ name: projectName });
@@ -72,7 +81,7 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
         const members: { userId: string; role: ProjectRole; joinedAt: Date }[] = [];
         const formEntries = Array.from(formData.entries());
         const memberEntries = formEntries.filter(([key]) => key.startsWith('members['));
-        
+
         // Group member entries by index
         const membersByIndex = new Map<string, { userId?: string; role?: ProjectRole }>();
         memberEntries.forEach(([key, value]) => {
@@ -117,19 +126,23 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
         });
 
         // Validate PRODUCT_OWNER count
-        if (productOwnerCount !== 1) {
+        if (productOwnerCount === 0) {
             throw new AppError('Project must have exactly one Product Owner', 400, 'ValidationError');
         }
 
         const projectData = {
             name: formData.get('name') as string,
             description: formData.get('description') as string || undefined,
+            estimated_time: formData.get('estimated_time') ? parseInt(formData.get('estimated_time') as string, 10) : 0,
             boards: [],
             members
         };
 
         const validatedData = validateCreateProject(projectData);
-        await addProject(validatedData);
+        await addProject({
+            ...validatedData,
+            estimated_time: projectData.estimated_time, // Use estimated_time from projectData
+        });
         revalidatePath('/dashboard');
         return { success: true };
     } catch (error) {
@@ -153,9 +166,11 @@ export async function addProject(projectData: Omit<Project, '_id' | 'createdAt'>
         const { db } = await connectToDatabase();
         const result = await db().collection('projects').insertOne({
             ...projectData,
+            estimated_time: projectData.estimated_time ?? 0, // Ensure it's stored properly
             createdAt: new Date(),
         });
-        
+
+
         return result;
     } catch (error) {
         return createErrorResponse(new AppError(
@@ -170,7 +185,7 @@ export async function addProject(projectData: Omit<Project, '_id' | 'createdAt'>
 export async function getProjectById(id: string): Promise<Project | null | ErrorResponse> {
     try {
         if (!id) throw new AppError('Project ID is required', 400);
-        
+
         const { db } = await connectToDatabase();
         const project = await db().collection('projects').findOne({ _id: new ObjectId(id) });
         return project ? JSON.parse(JSON.stringify(project)) : null;
@@ -182,33 +197,34 @@ export async function getProjectById(id: string): Promise<Project | null | Error
 // Update project
 export async function updateProject(id: string, projectData: Partial<Project>): Promise<any | ErrorResponse> {
     try {
-        if (!id) throw new AppError('Project ID is required', 400);
+        if (!id) throw new AppError("Project ID is required", 400);
 
         const validatedData = validateUpdateProject(projectData);
 
+        console.log("Before update, received projectData:", projectData);
+
         const { db } = await connectToDatabase();
-        const result = await db().collection('projects').updateOne(
+        const result = await db().collection("projects").updateOne(
             { _id: new ObjectId(id) },
-            { $set: validatedData }
+            {
+                $set: {
+                    ...validatedData,
+                    estimated_time: projectData.estimated_time !== undefined ? projectData.estimated_time : 0,
+                },
+            }
         );
-        
+
         if (result.matchedCount === 0) {
-            throw new AppError('Project not found', 404, 'NotFoundError');
+            throw new AppError("Project not found", 404, "NotFoundError");
         }
-        
-        revalidatePath('/dashboard');
+
+        revalidatePath("/dashboard");
         return result;
     } catch (error) {
-        if (error instanceof ZodError) {
-            return createErrorResponse(new AppError(
-                `Validation error: ${error.errors.map(e => e.message).join(', ')}`,
-                400,
-                'ValidationError'
-            ));
-        }
         return createErrorResponse(error);
     }
 }
+
 
 // Delete project
 export async function deleteProject(id: string): Promise<any | ErrorResponse> {
@@ -217,11 +233,11 @@ export async function deleteProject(id: string): Promise<any | ErrorResponse> {
 
         const { db } = await connectToDatabase();
         const result = await db().collection('projects').deleteOne({ _id: new ObjectId(id) });
-        
+
         if (result.deletedCount === 0) {
             throw new AppError('Project not found', 404, 'NotFoundError');
         }
-        
+
         revalidatePath('/dashboard');
         return result;
     } catch (error) {
@@ -241,8 +257,8 @@ export async function addProjectMember(projectId: string, userId: string, role: 
         const { db } = await connectToDatabase();
         const result = await db().collection('projects').updateOne(
             { _id: new ObjectId(projectId) },
-            { 
-                $push: { 
+            {
+                $push: {
                     members: {
                         ...validatedData,
                         joinedAt: new Date()
@@ -250,11 +266,11 @@ export async function addProjectMember(projectId: string, userId: string, role: 
                 }
             }
         );
-        
+
         if (result.matchedCount === 0) {
             throw new AppError('Project not found', 404, 'NotFoundError');
         }
-        
+
         revalidatePath('/dashboard');
         return result;
     } catch (error) {
@@ -280,21 +296,21 @@ export async function updateProjectMemberRole(projectId: string, userId: string,
 
         const { db } = await connectToDatabase();
         const result = await db().collection('projects').updateOne(
-            { 
+            {
                 _id: projectId,
                 'members.userId': userId
             },
-            { 
-                $set: { 
+            {
+                $set: {
                     'members.$.role': newRole
                 }
             }
         );
-        
+
         if (result.matchedCount === 0) {
             throw new Error('Project or member not found');
         }
-        
+
         revalidatePath('/dashboard');
         return result;
     } catch (error) {
@@ -312,30 +328,30 @@ export async function removeProjectMember(projectId: string, userId: string) {
         if (!userId) throw new Error('User ID is required');
 
         const { db } = await connectToDatabase();
-        
+
         // Check if this would remove the last member
         const project = await db().collection('projects').findOne({ _id: new ObjectId(projectId) });
         if (!project) {
             throw new Error('Project not found');
         }
-        
+
         if (project.members.length <= 1) {
             throw new Error('Cannot remove the last member from a project');
         }
 
         const result = await db().collection('projects').updateOne(
             { _id: new ObjectId(projectId) },
-            { 
-                $pull: { 
+            {
+                $pull: {
                     members: { userId }
                 }
             }
         );
-        
+
         if (result.matchedCount === 0) {
             throw new Error('Project not found');
         }
-        
+
         revalidatePath('/dashboard');
         return result;
     } catch (error) {
@@ -358,3 +374,76 @@ export async function getProjectMembers(projectId: string) {
         return createErrorResponse(error);
     }
 }
+
+export async function leaveProject(projectId: string, userId: string) {
+    try {
+        if (!projectId || !userId) throw new AppError("Project ID and User ID are required", 400);
+
+        const { db } = await connectToDatabase();
+        const project = await db().collection("projects").findOne({ _id: new ObjectId(projectId) });
+
+        if (!project) throw new AppError("Project not found", 404);
+
+        // Find the user in the members list
+        const memberIndex = project.members.findIndex((member: { userId: string; role: string }) => member.userId === userId);
+        if (memberIndex === -1) throw new AppError("You are not a member of this project", 403);
+
+        // Remove the user from the project
+        await db().collection("projects").updateOne(
+            { _id: new ObjectId(projectId) },
+            { $pull: { members: { userId } } }
+        );
+
+        revalidatePath("/dashboard");
+        return { success: true };
+    } catch (error) {
+        return createErrorResponse(error);
+    }
+}
+
+export async function becomeProductOwner(projectId: string, userId: string) {
+    try {
+        if (!projectId || !userId) {
+            return { error: "Project ID and User ID are required" };
+        }
+
+        const { db } = await connectToDatabase();
+        const project = await db().collection("projects").findOne({ _id: new ObjectId(projectId) });
+
+        if (!project) {
+            return { error: "Project not found" };
+        }
+
+        // Check if the user is already a member
+        const isMember = project.members.some((member: { userId: string; role: string }) => member.userId === userId);
+
+        // Ensure there is currently no Product Owner
+        const hasProductOwner = project.members.some((member: { userId: string; role: string }) => member.role === "PRODUCT_OWNER");
+        if (hasProductOwner) {
+            return { error: "This project already has a Product Owner." };
+        }
+
+        // If user is not a member, add them
+        if (!isMember) {
+            await db().collection("projects").updateOne(
+                { _id: new ObjectId(projectId) },
+                {
+                    $push: { members: { userId, role: "PRODUCT_OWNER" } } // Add as member & Product Owner
+                }
+            );
+        } else {
+            // If user is already a member, update their role to Product Owner
+            await db().collection("projects").updateOne(
+                { _id: new ObjectId(projectId), "members.userId": userId },
+                { $set: { "members.$.role": "PRODUCT_OWNER" } }
+            );
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error(error);
+        return { error: "Internal Server Error" };
+    }
+}
+
+
