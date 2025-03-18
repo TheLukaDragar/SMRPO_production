@@ -1,7 +1,6 @@
 "use client"
 import React, { useCallback, useEffect, useState } from "react";
-import { DragDropContext, Droppable, DropResult } from "@hello-pangea/dnd";
-import UserStoryCard from "@/components/userStoryCard";
+import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { UserStory } from "@/lib/types/user-story-types";
 import { User } from "@/lib/types/user-types";
 import {
@@ -9,15 +8,16 @@ import {
     getAllSprints,
     updateStory,
     newSprint,
-    addStory,
     updateSprint
 } from "@/lib/actions/user-story-actions";
 import StoryTable from "@/components/story-table";
-import {sprint, sprintNoId} from "@/lib/types/sprint-types";
+import { sprint, sprintNoId } from "@/lib/types/sprint-types";
 import { useProject } from "@/lib/contexts/project-context";
 import { getProjectMembers } from "@/lib/actions/project-actions";
 import { getUsersByIds } from "@/lib/actions/user-actions";
 import { TimeLoggingPopup } from '@/components/TimeLoggingPopup';
+import AddSprintModal from '@/components/AddSprintModal';
+import {useUser} from "@/lib/hooks/useUser";
 
 export default function DNDPage() {
     const [isRefetching, setIsRefetching] = useState(false);
@@ -25,15 +25,31 @@ export default function DNDPage() {
     const [columns, setColumns] = useState<sprint[]>([]);
     const [allSprints, setAllSprints] = useState<sprint[]>([]);
     const [projectUsers, setProjectUsers] = useState<User[]>([]);
-    const {activeProject, loading, refreshProjects } = useProject();
+    const { activeProject, loading, refreshProjects } = useProject();
     const [selectedStory, setSelectedStory] = useState<UserStory | null>(null);
+    const [isSprintModalOpen, setIsSprintModalOpen] = useState(false);
+    const [userRole, setUserRole] = useState<string | null>(null);
+
+    const { user } = useUser();
 
     const fetchProjectUsers = useCallback(async () => {
         try {
             setIsRefetching(true);
             const users = await getProjectMembers(activeProject?._id);
             console.log('Users JSON:', JSON.stringify(users));
-            const usr_ids = users.map((user) => user.userId);
+
+            if (user && user._id) {
+                console.log("all u;" , users)
+                console.log("curr u;", user)
+
+                const currentUserInProject = users.filter((projectUser: any) => projectUser.userId == user._id);
+                if (currentUserInProject) {
+                    setUserRole(currentUserInProject[0].role);
+                    console.log("Current user role:", currentUserInProject[0].role);
+                }
+            }
+
+            const usr_ids = users.map((user: User) => user._id);
             console.log("usr_ids: ", usr_ids);
             await fetchUserData(usr_ids);
         } catch (error) {
@@ -41,15 +57,18 @@ export default function DNDPage() {
         } finally {
             setIsRefetching(false);
         }
-    }, [activeProject]);
+    }, [activeProject, user]);
 
     const fetchSprints = useCallback(async () => {
         try {
             setIsRefetching(true);
             const sprints = await getAllSprints();
-            setAllSprints(sprints);
+            const projSprint = sprints.filter(
+                (sprint: sprint) => sprint.projectId === activeProject?._id
+            );
+            setAllSprints(projSprint);
             const activeSprints = sprints.filter(
-                (sprint:sprint) => sprint.isActive && sprint.projectId === activeProject?._id
+                (sprint: sprint) => sprint.isActive && sprint.projectId === activeProject?._id
             );
             console.log("all sprints: ", sprints);
             console.log("active sprints: ", activeSprints);
@@ -98,6 +117,7 @@ export default function DNDPage() {
         fetchStories();
         fetchSprints();
         fetchProjectUsers();
+        console.log("role: ", userRole)
     }, [activeProject, fetchProjectUsers, fetchSprints, fetchStories]);
 
     const handleDragEnd = (result: DropResult) => {
@@ -123,7 +143,7 @@ export default function DNDPage() {
         setSelectedStory(null);
     };
 
-    const handleAddSprint = async () => {
+    const handleAddSprint = async (startDate: Date, endDate: Date, velocity: number, name: string) => {
         try {
             const oldSprintIndex = columns.findIndex(col => col.isActive);
             if (oldSprintIndex !== -1) {
@@ -142,11 +162,13 @@ export default function DNDPage() {
             const sprintNumber = allSprints.length + 1;
             const toAdd = {
                 projectId: activeProject?._id,
-                sprintName: `Sprint ${sprintNumber}`,
+                sprintName: name || `Sprint ${sprintNumber}`,
                 isActive: true,
-                sprintParts: ['Sprint Backlog', 'Development', 'Testing', 'Acceptance', 'Done']
+                sprintParts: ['Sprint Backlog', 'Development', 'Testing', 'Acceptance', 'Done'],
+                startDate: startDate,
+                endDate: endDate,
+                velocity: velocity
             } as unknown as sprintNoId;
-
 
             const newSprintId = await newSprint(toAdd);
 
@@ -163,19 +185,35 @@ export default function DNDPage() {
 
     return (
         <div>
-            <button
-                onClick={() => handleAddSprint()}
-                className="px-4 py-2 bg-blue-600 text-white rounded"
-            >
-                Add Sprint
-            </button>
             <DragDropContext onDragEnd={handleDragEnd}>
                 <div className="p-6 bg-gray-100 min-h-screen">
-                    <h1 className="text-2xl font-bold mb-6 text-gray-800">Project Planning Board</h1>
+                    <div className="flex justify-between items-center mb-6">
+                        <h1 className="text-2xl font-bold text-gray-800">Project Planning Board</h1>
+                        {userRole === 'SCRUM_MASTER' && (
+                            <button
+                                onClick={() => setIsSprintModalOpen(true)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded"
+                            >
+                                Add Sprint
+                            </button>
+                        )}
+                    </div>
                     <div className="flex space-x-8 overflow-x-auto pb-4">
                         {columns.map((sprint) => (
                             <div key={sprint._id} className="flex-none">
-                                <h2 className="mb-4">{sprint.sprintName}</h2>
+                                <div className="flex items-center mb-4">
+                                    <h2 className="font-bold">{sprint.sprintName}</h2>
+                                    {sprint.startDate && sprint.endDate && (
+                                        <span className="ml-2 text-sm text-gray-600">
+                                            {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
+                                        </span>
+                                    )}
+                                    {sprint.velocity && (
+                                        <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                                            Velocity: {sprint.velocity}
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex space-x-4 overflow-x-auto">
                                     {sprint.sprintParts && sprint.sprintParts.map((part) => (
                                         <StoryTable
@@ -218,6 +256,13 @@ export default function DNDPage() {
                     )}
                 </div>
             </DragDropContext>
+
+            <AddSprintModal
+                isOpen={isSprintModalOpen}
+                onClose={() => setIsSprintModalOpen(false)}
+                onAdd={handleAddSprint}
+                existingSprints={allSprints}
+            />
         </div>
     );
 }

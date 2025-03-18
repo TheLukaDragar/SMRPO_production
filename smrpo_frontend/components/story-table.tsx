@@ -262,7 +262,7 @@ const StoryTable: React.FC<StoryTableProps> = ({ droppableId, title, items, proj
                                         isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
                                     }`}
                                 >
-                                    {isSubmitting ? 'Adding...' : 'Add User'}
+                                    {isSubmitting ? 'Adding...' : 'Add User Story'}
                                 </button>
                             </div>
                         </form>

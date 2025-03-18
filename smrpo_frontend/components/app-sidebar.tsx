@@ -117,8 +117,8 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
         icon: Frame,
       },
       {
-        name: "Backlog Board",
-        url: "/dashboard/boards/backlog",
+        name: "Archive Board",
+        url: projectId ? `/dashboard/project/${projectId}/archive` : "/dashboard/settings/archive",
         icon: PieChart,
       },
       // {

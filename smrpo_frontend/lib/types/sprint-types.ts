@@ -1,14 +1,20 @@
 export interface sprint {
     _id: string;
-    sprintName: string;
     projectId: string;
-    sprintParts: [];
+    sprintName: string;
     isActive: boolean;
+    sprintParts: string[];
+    startDate?: Date;
+    endDate?: Date;
+    velocity?: number;
 }
 
 export interface sprintNoId {
-    sprintName: string;
     projectId: string;
-    sprintParts: [];
+    sprintName: string;
     isActive: boolean;
+    sprintParts: string[];
+    startDate?: Date;
+    endDate?: Date;
+    velocity?: number;
 }
