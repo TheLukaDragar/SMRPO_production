@@ -4,6 +4,7 @@ import {connectToDatabase} from "@/lib/db/connection";
 import {UserStoryNoId, UserStory} from "@/lib/types/user-story-types";
 import {sprint, sprintNoId} from "@/lib/types/sprint-types";
 import {ObjectId} from "mongodb";
+import {tasks, tasks_noId} from "@/lib/types/tasks";
 
 
 // Get all user stories
@@ -83,6 +84,39 @@ export async function logTimeForUserStory(storyId: string, time: number) {
         { _id: objectId },
         { $inc: { loggedTime: time } }
     );
+    return {
+        acknowledged: result.acknowledged,
+        modifiedCount: result.modifiedCount,
+    };
+}
+
+export async function getTasks() {
+    const { db } = await connectToDatabase();
+    const stories = await db().collection('tasks').find({}).toArray();
+    return JSON.parse(JSON.stringify(stories));
+}
+
+export async function addTask(task: tasks_noId) {
+    const { db } = await connectToDatabase();
+    const result = await db().collection('tasks').insertOne(task);
+
+    return {
+        acknowledged: result.acknowledged,
+        insertedId: result.insertedId.toString(),
+    };
+}
+
+export async function updateTask(task: tasks) {
+    const { db } = await connectToDatabase();
+    const { _id, ...taskToUpdate } = task;
+
+    const objectId = new ObjectId(_id);
+
+    const result = await db().collection('tasks').updateOne(
+        { _id: objectId },
+        { $set: taskToUpdate }
+    );
+
     return {
         acknowledged: result.acknowledged,
         modifiedCount: result.modifiedCount,

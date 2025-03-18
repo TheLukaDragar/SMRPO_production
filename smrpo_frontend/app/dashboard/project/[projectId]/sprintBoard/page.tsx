@@ -18,6 +18,7 @@ import { getUsersByIds } from "@/lib/actions/user-actions";
 import { TimeLoggingPopup } from '@/components/TimeLoggingPopup';
 import AddSprintModal from '@/components/AddSprintModal';
 import {useUser} from "@/lib/hooks/useUser";
+import BacklogTable from "@/components/backlog-table";
 
 export default function DNDPage() {
     const [isRefetching, setIsRefetching] = useState(false);
@@ -29,12 +30,21 @@ export default function DNDPage() {
     const [selectedStory, setSelectedStory] = useState<UserStory | null>(null);
     const [isSprintModalOpen, setIsSprintModalOpen] = useState(false);
     const [userRole, setUserRole] = useState<string | null>(null);
+    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+
 
     const { user } = useUser();
+
+    const renderLoading = () => (
+        <div className="flex justify-center items-center p-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+    );
 
     const fetchProjectUsers = useCallback(async () => {
         try {
             setIsRefetching(true);
+            setIsLoadingUsers(true);
             const users = await getProjectMembers(activeProject?._id);
             console.log('Users JSON:', JSON.stringify(users));
 
@@ -48,10 +58,14 @@ export default function DNDPage() {
                     console.log("Current user role:", currentUserInProject[0].role);
                 }
             }
-
-            const usr_ids = users.map((user: User) => user._id);
+            const usr_ids = users.map((user: any) => user.userId);
             console.log("usr_ids: ", usr_ids);
-            await fetchUserData(usr_ids);
+            if (usr_ids.length > 0) {
+                await fetchUserData(usr_ids);
+            } else {
+                setProjectUsers([]);
+                setIsLoadingUsers(false);
+            }
         } catch (error) {
             console.error("Error fetching project users:", error);
         } finally {
@@ -105,6 +119,7 @@ export default function DNDPage() {
             console.error("Error fetching userData:", error);
         } finally {
             setIsRefetching(false);
+            setIsLoadingUsers(false);
         }
     }, []);
 
@@ -192,59 +207,99 @@ export default function DNDPage() {
                         {userRole === 'SCRUM_MASTER' && (
                             <button
                                 onClick={() => setIsSprintModalOpen(true)}
-                                className="px-4 py-2 bg-blue-600 text-white rounded"
+                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                             >
                                 Add Sprint
                             </button>
                         )}
                     </div>
-                    <div className="flex space-x-8 overflow-x-auto pb-4">
-                        {columns.map((sprint) => (
-                            <div key={sprint._id} className="flex-none">
-                                <div className="flex items-center mb-4">
-                                    <h2 className="font-bold">{sprint.sprintName}</h2>
-                                    {sprint.startDate && sprint.endDate && (
-                                        <span className="ml-2 text-sm text-gray-600">
-                                            {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
-                                        </span>
-                                    )}
-                                    {sprint.velocity && (
-                                        <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                                            Velocity: {sprint.velocity}
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex space-x-4 overflow-x-auto">
-                                    {sprint.sprintParts && sprint.sprintParts.map((part) => (
-                                        <StoryTable
-                                            droppableId={`${sprint._id}-${part}`}
-                                            key={part}
-                                            title={part}
-                                            items={stories.filter(story => story.SprintPosition === part && story.sprintID === sprint._id)}
-                                            projectUsers={projectUsers}
-                                            setItems={setStories}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
 
-                    {/* Time Logging Section */}
-                    <div className="mt-6">
-                        <h2 className="text-xl font-bold mb-4">Time Logging</h2>
-                        {stories.map(story => (
-                            <div key={story._id} className="flex items-center justify-between p-2 border mb-2 bg-white rounded">
-                                <span>{story.title}</span>
-                                <button
-                                    onClick={() => setSelectedStory(story)}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded"
-                                >
-                                    Log Time
-                                </button>
+                    {/* Loading State */}
+                    {isLoadingUsers && renderLoading()}
+
+                    {/* Content when data is loaded */}
+                    {!isLoadingUsers && (
+                        <>
+                            {/* Product Backlog Section */}
+                            <div className="mb-8">
+                                <h2 className="text-xl font-semibold mb-4">Product Backlog</h2>
+                                <BacklogTable
+                                    droppableId={`${activeProject?._id}-backlog`}
+                                    key={`${activeProject?._id}-backlog`}
+                                    title={"Product Backlog"}
+                                    items={stories.filter(story => story.SprintPosition === "backlog" && story.sprintID === activeProject?._id)}
+                                    projectUsers={projectUsers}
+                                    setItems={setStories}
+                                    userRole={userRole}
+                                />
                             </div>
-                        ))}
-                    </div>
+
+                            {/* Sprint Boards Section */}
+                            <div className="mt-10">
+                                <h2 className="text-xl font-semibold mb-4">Sprint Boards</h2>
+                                {columns.length > 0 ? (
+                                    <div className="flex space-x-8 overflow-x-auto pb-6">
+                                        {columns.map((sprint) => (
+                                            <div key={sprint._id} className="flex-none min-w-max">
+                                                <div className="mb-4 bg-white p-3 rounded-lg shadow-sm">
+                                                    <h3 className="font-bold text-lg">{sprint.sprintName}</h3>
+                                                    {sprint.startDate && sprint.endDate && (
+                                                        <span className="text-sm text-gray-600 block mt-1">
+                                                            {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
+                                                        </span>
+                                                    )}
+                                                    {sprint.velocity && (
+                                                        <span className="mt-2 inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                                                            Velocity: {sprint.velocity}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex space-x-6 overflow-x-auto">
+                                                    {sprint.sprintParts && sprint.sprintParts.map((part) => (
+                                                        <StoryTable
+                                                            droppableId={`${sprint._id}-${part}`}
+                                                            key={part}
+                                                            title={part}
+                                                            items={stories.filter(story => story.SprintPosition === part && story.sprintID === sprint._id)}
+                                                            projectUsers={projectUsers}
+                                                            setItems={setStories}
+                                                            userRole={userRole}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="bg-white p-8 rounded-lg text-center">
+                                        <p className="text-gray-600">No active sprints found. {userRole === 'SCRUM_MASTER' ? 'Add a sprint to get started.' : 'Contact your Scrum Master to create a sprint.'}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Time Logging Section */}
+                            <div className="mt-10 bg-white p-6 rounded-lg shadow-sm">
+                                <h2 className="text-xl font-bold mb-4">Time Logging</h2>
+                                {stories.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {stories.map(story => (
+                                            <div key={story._id} className="flex items-center justify-between p-3 border border-gray-200 mb-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
+                                                <span className="font-medium">{story.title}</span>
+                                                <button
+                                                    onClick={() => setSelectedStory(story)}
+                                                    className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                                                >
+                                                    Log Time
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-600 text-center">No user stories available for time logging.</p>
+                                )}
+                            </div>
+                        </>
+                    )}
 
                     {selectedStory && (
                         <TimeLoggingPopup

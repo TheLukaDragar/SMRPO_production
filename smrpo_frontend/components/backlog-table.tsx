@@ -16,11 +16,12 @@ interface StoryTableProps {
     setItems: React.Dispatch<React.SetStateAction<UserStory[]>>;
     userRole: string | undefined;
 }
-const StoryTable: React.FC<StoryTableProps> = ({ droppableId, title, items, projectUsers, setItems, userRole }) => {
+const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, projectUsers, setItems, userRole }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+
 
     const [newUserStory, setNewUserStory] = useState({
         title: "",
@@ -82,7 +83,7 @@ const StoryTable: React.FC<StoryTableProps> = ({ droppableId, title, items, proj
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md w-80 flex-shrink-0">
+        <div className="bg-white rounded-lg shadow-md w-full flex-shrink-0">
             <div className="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                 <h2 className="font-bold text-lg text-gray-700">{title}</h2>
                 <div className="text-sm text-gray-500 mt-1">{items.length} stories</div>
@@ -103,22 +104,15 @@ const StoryTable: React.FC<StoryTableProps> = ({ droppableId, title, items, proj
                                 index={index}
                                 storyData={story_data}
                                 userRole={userRole}
-                                team={projectUsers}
+
                             />
                         ))}
                         {provided.placeholder}
                     </div>
                 )}
             </Droppable>
-        </div>
-    );
-};
 
-export default StoryTable;
-
-/*
-
-<div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+            <div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
                 <button onClick={() => isAdmin && setIsModalOpen(true)}
                         className="w-full py-2 text-sm text-gray-600 hover:text-gray-800 font-medium flex items-center justify-center">
                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -278,6 +272,8 @@ export default StoryTable;
                     </div>
                 </div>
             )}
+        </div>
+    );
+};
 
-
-*/
+export default BacklogTable;
