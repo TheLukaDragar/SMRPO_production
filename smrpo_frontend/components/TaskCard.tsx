@@ -192,7 +192,7 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                         )}
                         {!task.isAccepted && task.AssignedTo && (
                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 whitespace-nowrap">
-                                Pending Acceptance
+                                Pending Acce..
                             </Badge>
                         )}
                     </div>
@@ -259,35 +259,9 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                                 onClick={handleTaskAcceptance}
                                 className="border-yellow-200 hover:bg-yellow-50 text-yellow-800"
                             >
-                                {!task.AssignedTo ? "Accept Task" : "Take Over Task"}
+                                {task.AssignedTo?._id === user?._id ? "Accept Task" : "Take Over Task"}
                             </Button>
                         )}
-
-                        {/* Show Reject Task button for accepted tasks assigned to current user */}
-                        {user && task.isAccepted && task.AssignedTo && task.AssignedTo._id === user._id && !task.IsCompleted && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleTaskAcceptance}
-                                className="border-red-200 hover:bg-red-50 text-red-800"
-                            >
-                                Reject Task
-                            </Button>
-                        )}
-
-                        {task.AssignedTo &&
-                            task.AssignedTo._id === user?._id &&
-                            task.isAccepted &&
-                            !task.IsCompleted && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleTaskCompletion}
-                                    className="border-green-200 hover:bg-green-50 text-green-800"
-                                >
-                                    Complete
-                                </Button>
-                            )}
 
                         {canDelete && (
                             <Button
@@ -300,6 +274,35 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                             </Button>
                         )}
                     </div>
+                </div>
+                
+                {/* New row for Reject and Complete buttons */}
+                <div className="flex justify-end gap-2 mt-2">
+                    {/* Show Reject Task button for accepted tasks assigned to current user */}
+                    {user && task.isAccepted && task.AssignedTo && task.AssignedTo._id === user._id && !task.IsCompleted && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleTaskAcceptance}
+                            className="border-red-200 hover:bg-red-50 text-red-800"
+                        >
+                            Reject Task
+                        </Button>
+                    )}
+
+                    {task.AssignedTo &&
+                        task.AssignedTo._id === user?._id &&
+                        task.isAccepted &&
+                        !task.IsCompleted && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleTaskCompletion}
+                                className="border-green-200 hover:bg-green-50 text-green-800"
+                            >
+                                Complete
+                            </Button>
+                        )}
                 </div>
             </CardContent>
         </Card>

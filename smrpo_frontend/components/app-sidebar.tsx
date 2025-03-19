@@ -51,25 +51,25 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
 
         ],
       },
-      {
-        title: "Sprint Planning",
-        url: "/dashboard/sprints",
-        icon: Bot,
-        items: [
-          {
-            title: "Current Sprint",
-            url: "/dashboard/sprints/current",
-          },
-          {
-            title: "Backlog",
-            url: "/dashboard/sprints/backlog",
-          },
-          {
-            title: "Planning",
-            url: "/dashboard/sprints/planning",
-          },
-        ],
-      },
+      // {
+      //   title: "Sprint Planning",
+      //   url: "/dashboard/sprints",
+      //   icon: Bot,
+      //   items: [
+      //     {
+      //       title: "Current Sprint",
+      //       url: "/dashboard/sprints/current",
+      //     },
+      //     {
+      //       title: "Backlog",
+      //       url: "/dashboard/sprints/backlog",
+      //     },
+      //     {
+      //       title: "Planning",
+      //       url: "/dashboard/sprints/planning",
+      //     },
+      //   ],
+      // },
       // {
       //   title: "Documentation",
       //   url: "/dashboard/docs",
@@ -109,26 +109,26 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
 
         ],
       },
-      {
-        title: "Documentation",
-        url: "/documentation",
-        icon: BookOpen,
-        items: [
-          // {
-          //   title: "Project Settings",
-          //   url: projectId ? `/dashboard/project/${projectId}/settings` : "/dashboard/settings/project",
-          // },
-          {
-            title: "Documentation",
-            url: "/documentation",
-          },
-          // {
-          //   title: "Permissions",
-          //   url: projectId ? `/dashboard/project/${projectId}/settings/permissions` : "/dashboard/settings/permissions",
-          // },
+      // {
+      //   title: "Documentation",
+      //   url: "/documentation",
+      //   icon: BookOpen,
+      //   items: [
+      //     // {
+      //     //   title: "Project Settings",
+      //     //   url: projectId ? `/dashboard/project/${projectId}/settings` : "/dashboard/settings/project",
+      //     // },
+      //     {
+      //       title: "Documentation",
+      //       url: "/documentation",
+      //     },
+      //     // {
+      //     //   title: "Permissions",
+      //     //   url: projectId ? `/dashboard/project/${projectId}/settings/permissions` : "/dashboard/settings/permissions",
+      //     // },
 
-        ],
-      },
+      //   ],
+      // },
     ],
     boards: [
       {

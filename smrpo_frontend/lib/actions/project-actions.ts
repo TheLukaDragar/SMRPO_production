@@ -70,9 +70,11 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
 
         const projectName = formData.get('name') as string;
 
-        // Check for duplicate project name
+        // Check for duplicate project name (case-insensitive)
         const { db } = await connectToDatabase();
-        const existingProject = await db().collection('projects').findOne({ name: projectName });
+        const existingProject = await db().collection('projects').findOne({ 
+            name: { $regex: new RegExp(`^${projectName}$`, 'i') } 
+        });
         if (existingProject) {
             return createErrorResponse(new AppError('A project with this name already exists', 400, 'ValidationError'));
         }

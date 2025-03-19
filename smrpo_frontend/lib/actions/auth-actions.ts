@@ -22,8 +22,8 @@ export async function login(formData: FormData): Promise<{ success: true } | Err
         const { db } = await connectToDatabase();
         const user = await db().collection('users').findOne({
             $or: [
-                { email: validatedData.emailOrUsername },
-                { userName: validatedData.emailOrUsername }
+                { email: { $regex: new RegExp(`^${validatedData.emailOrUsername}$`, 'i') } },
+                { userName: { $regex: new RegExp(`^${validatedData.emailOrUsername}$`, 'i') } }
             ]
         });
 
@@ -84,14 +84,18 @@ export async function register(formData: FormData): Promise<{ success: true } | 
 
         const { db } = await connectToDatabase();
 
-        // Check if email already exists
-        const existingUserByEmail = await db().collection('users').findOne({ email: validatedData.email });
+        // Check if email already exists (case-insensitive)
+        const existingUserByEmail = await db().collection('users').findOne({ 
+            email: { $regex: new RegExp(`^${validatedData.email}$`, 'i') } 
+        });
         if (existingUserByEmail) {
             return createErrorResponse(new AppError('Email already registered', 400, 'ValidationError'));
         }
 
-        // Check if username already exists
-        const existingUserByUsername = await db().collection('users').findOne({ userName: validatedData.userName });
+        // Check if username already exists (case-insensitive)
+        const existingUserByUsername = await db().collection('users').findOne({ 
+            userName: { $regex: new RegExp(`^${validatedData.userName}$`, 'i') } 
+        });
         if (existingUserByUsername) {
             return createErrorResponse(new AppError('Username already taken', 400, 'ValidationError'));
         }

@@ -26,11 +26,20 @@ export async function handleAddUser(formData: FormData) {
     const email = formData.get('email') as string;
     const userName = formData.get('userName') as string;
    
-
-    // Check for duplicate email
-    const duplicateEmail = await db().collection('users').findOne({ email });
+    // Check for duplicate email (case-insensitive)
+    const duplicateEmail = await db().collection('users').findOne({ 
+        email: { $regex: new RegExp(`^${email}$`, 'i') } 
+    });
     if (duplicateEmail) {
         throw new Error("Email already registered");
+    }
+
+    // Check for duplicate username (case-insensitive)
+    const duplicateUsername = await db().collection('users').findOne({ 
+        userName: { $regex: new RegExp(`^${userName}$`, 'i') } 
+    });
+    if (duplicateUsername) {
+        throw new Error("Username already exists");
     }
 
     const userData : UserNoId = {
@@ -120,17 +129,21 @@ export async function updateUser(id: string, userData: Partial<User>): Promise<{
             throw new AppError("User not found", 404, "NotFoundError");
         }
 
-        // Check for duplicate username
-        if (updateData.userName && updateData.userName !== currentUser.userName) {
-            const duplicateUser = await db().collection('users').findOne({ userName: updateData.userName });
+        // Check for duplicate username (case-insensitive)
+        if (updateData.userName && updateData.userName.toLowerCase() !== currentUser.userName.toLowerCase()) {
+            const duplicateUser = await db().collection('users').findOne({ 
+                userName: { $regex: new RegExp(`^${updateData.userName}$`, 'i') } 
+            });
             if (duplicateUser) {
                 throw new AppError("Username already exists", 400, "ValidationError");
             }
         }
 
-        // Check for duplicate email
-        if (updateData.email && updateData.email !== currentUser.email) {
-            const duplicateEmail = await db().collection('users').findOne({ email: updateData.email });
+        // Check for duplicate email (case-insensitive)
+        if (updateData.email && updateData.email.toLowerCase() !== currentUser.email.toLowerCase()) {
+            const duplicateEmail = await db().collection('users').findOne({ 
+                email: { $regex: new RegExp(`^${updateData.email}$`, 'i') }
+            });
             if (duplicateEmail) {
                 throw new AppError("Email already exists", 400, "ValidationError");
             }
@@ -208,7 +221,7 @@ export async function handleUpdateUser(formData: FormData, userId: string): Prom
         const newPassword = formData.get("password") as string;
 
         // Only include fields that have changed
-        if (newUserName && newUserName !== currentUser.userName) {
+        if (newUserName && newUserName.toLowerCase() !== currentUser.userName.toLowerCase()) {
             updateData.userName = newUserName;
         }
         if (firstName && firstName !== currentUser.firstName) {
@@ -217,7 +230,7 @@ export async function handleUpdateUser(formData: FormData, userId: string): Prom
         if (lastName && lastName !== currentUser.lastName) {
             updateData.lastName = lastName;
         }
-        if (email && email !== currentUser.email) {
+        if (email && email.toLowerCase() !== currentUser.email.toLowerCase()) {
             updateData.email = email;
         }
         if (role && role !== currentUser.role) {
