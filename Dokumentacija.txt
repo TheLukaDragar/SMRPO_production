@@ -1,0 +1,158 @@
+# 📌 Dokumentacija za uporabo spletne strani (Kanban metoda)
+
+## 📖 Uvod
+Ta dokument opisuje uporabo spletne aplikacije, ki temelji na metodi Kanban za upravljanje nalog in projektov. Kanban omogoča vizualno sledenje nalogam ter optimizacijo delovnih tokov.
+
+## 🔑 Prijava in registracija
+1. **Registracija**:
+   - Kliknite na gumb "Sign up"
+   - Vnesite svoje podatke
+   - Kliknite "Create account".
+
+2. **Prijava**:
+   - Vnesite e-poštni naslov in geslo.
+   - Kliknite "Login".
+
+## 📌 Ustvarjanje in upravljanje projektov v nadzorni plošči (Dashboard)
+1. **Ustvarjanje novega projekta**:
+   - Na nadzorni plošči kliknite "+ Add Project".
+   - Vnesite podatke projekta
+   - Kliknite "Create Project".
+
+2. **Urejanje projekta**:
+   - Projekt lahko ureja samo administrator!
+   - Na nadzorni plošči kliknite tri pike v desnem zgornjem kotu projekta.
+   - Kliknite "Edit".
+   - Ko ste zadovoljni s spremembo, kliknite "Save Changes".
+
+3. **Brisanje projekta**:
+   - Projekt lahko ureja samo administrator!
+   - Na nadzorni plošči kliknite tri pike v desnem zgornjem kotu projekta.
+   - Kliknite "Delete".
+
+4. **Izbiranje projekta**:
+   - Za izbiro aktivnega projekta kliknete dve puščici v levem zgornjem kotu.
+   - Iz odprtega menija izberete aktivni projekt
+   - Ime vašega aktivnega projekta bo vedno izpisano v levem zogrnjem kotu poleg dveh puščic.
+   - Kliknite tri pike v desnem zgornjem kotu projekta.
+   - Kliknite "Delete".
+
+5. **Zapuščanje projekta**:
+   - Projekt lahko zapustite, če ste že v projektu! Projekta ni mogoče zapustiti, če niste v projektu!
+   - Na nadzorni plošči kliknite tri pike v desnem zgornjem kotu projekta.
+   - Kliknite "Leave Project".
+
+6. **Prevzem projekta**:
+   - Projekt lahko prevzamete, če še niste v projektu in ta nima odgovornega lastnika produkta! Projekta ni mogoče prevzeti, če že ima odgovornega lastnika produkta ali ste že del projekta!
+   - Na nadzorni plošči kliknite tri pike v desnem zgornjem kotu projekta.
+   - Kliknite "Become Project Owner".
+
+## 📊 Sprint Board
+1. **Dodajanje zgodbe**:
+   - Kliknite na "Sprint Board" v stranskem meniju na levi.
+   - Na dnu stolpca klinkite "+ Add Story"
+   - Vnesite podatke naloge.
+   - Kliknite "Add Story".
+
+2. **Premikanje zgodbe**:
+   - Premikanje zgodbe po tabli je enostavno!
+   - Kliknite in držite zgodbo in jo izpustite na željenem mestu.
+
+3. **Odstranjevanje/urejanje zgodbe**:
+   - Trenutno ni na voljo :(
+
+4. **Dodajanje novega sprinta**:
+   - Kliknite na "Sprint Board" v stranskem meniju na levi.
+   - Kliknite na "Add Sprint" v zgornjem desnem kotu.
+   - Vnesite podatke sprinta.
+   - Kliknite "Add Sprint".
+
+5. **Beleženje ur**:
+   - Kliknite na "Sprint Board" v stranskem meniju na levi.
+   - Podrsajte na dno strani do "Sprint Boards".
+   - Kliknite na kartico vaše naloge.
+   - Vnesite porabljen čas.
+   - Kliknite "Log".
+   - Kliknite "Save Changes".
+	
+
+## 🔧 Projektne nastavitve
+1. **Dodajanje članov ekipe**:
+   - Člane lahko dodaja samo administrator!
+   - Postavite se v aktivni projekt (glejte prejšnjo točko)
+   - Kliknite na "Project Settings" in nato "Team Members" v stranskem meniju na levi.
+   - V desnem zgornjem kotu kliknite "Add Team Member"
+   - Vnesite ime člana in ga izberite iz ponujenih možnosti.
+   - Kliknite na vlogo, ki mu jo želite dodati.
+   - Kliknite "Add member".
+
+2. **Odstranjevanje članov ekipe**:
+   - Člane lahko odstranjuje samo administrator!
+   - Postavite se v aktivni projekt (glejte prejšnjo točko)
+   - Kliknite na "Project Settings" in nato "Team Members" v stranskem meniju na levi.
+   - Člana odstranite tako, da v meniju "Current Team Members" klinkete na rdeči "X" v vrstici z uporabnikovim imenom.
+
+## 📋 Administracija
+1. **Dodajanje uporabnikov**:
+   - Administracijo lahko ureja samo administrator!
+   - Kliknite na "Admin" in nato "User Management" v stranskem meniju na levi.
+   - V zgornjem levem kotu kliknite "Add User"
+   - Vnesite uporabnikove podatke in dodelite ustrezno vlogo.
+   - Kliknite "Create User".
+
+2. **Urejanje uporabnikov**:
+   - Administracijo lahko ureja samo administrator!
+   - Kliknite na "Admin" in nato "User Management" v stranskem meniju na levi.
+   - Pod članom, katerega želite urejati, kliknite "Edit User".
+   - Vnesite uporabnikove podatke in dodelite ustrezno vlogo.
+   - Kliknite "Save Changes".
+
+3. **Odstranjevanje uporabnikov**:
+   - Administracijo lahko ureja samo administrator!
+   - Kliknite na "Admin" in nato "User Management" v stranskem meniju na levi.
+   - Pod članom, katerega želite urejati, kliknite "Delete User".
+
+## 👥 Uporabniške vloge
+- **Administrator**: Admin: Ima vse pravice.
+- **Product owner**: Odgovorni lastnik naloge: Dodaja naloge, ureja vsebino, dodeljuje člane. Vedno mora biti točno en (1) "Product owner".
+- **Developer**: Razvijalec: Omejene pravice.
+
+## ❓ Pogosta vprašanja (FAQ)
+### Kako pridem do nadzorne plošče (Dashboard)?
+- Kliknite na "Projects" in nato "Overview" v stranskem meniju na levi.
+
+### Ali lahko urejam projekte drugih uporabnikov?
+- Samo če imate vlogo administratorja.
+
+### Zakaj nimam treh pik v kotu projekta?
+- Nimate vloge administratorja. Obrnite se na administratorja
+
+### Zakaj ne dela Sprint Planning?
+- Trenutno je ta del še v razvoju. Do nadaljnega se obrnite na "Sprint Board" na dnu dotičnega menija.
+
+### Zakaj ne dela Backlog Board?
+- Trenutno je ta del še v razvoju. Do nadaljnega se obrnite na "Sprint Board" na dnu dotičnega menija.
+
+### Zakaj ne morem urejati zgodbe na Sprint Boardu?
+- Trenutno je ta del še v razvoju.
+
+### Zakaj ne morem izbirsati zgodbe na Sprint Boardu?
+- Trenutno je ta del še v razvoju.
+
+### Kako dodam oceno časovne zahtevnosti?
+- Oceno časovne zahtevnosti podate ob ustvarjanju projekta ali naloge.
+- Oceno časovne zahtevnosti urejate v podatkih projekta ali naloge.
+
+### Zakaj ne morem prevzeti zgodbe na Sprint Boardu?
+- Trenutno je ta del še v razvoju.
+
+### Zakaj ne morem zapustiti zgodbe na Sprint Boardu?
+- Trenutno je ta del še v razvoju.
+
+## 📞 Podpora
+Za dodatno pomoč se obrnite na [podpora@example.com](mailto:podpora@example.com).
+
+---
+
+📌 **Hitra povezava**: [Spletna Stran](https://www.example.com)
+

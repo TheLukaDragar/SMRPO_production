@@ -47,7 +47,7 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
             title: "Overview",
             url: "/dashboard",
           },
-         
+
         ],
       },
       {
@@ -105,7 +105,27 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
           //   title: "Permissions",
           //   url: projectId ? `/dashboard/project/${projectId}/settings/permissions` : "/dashboard/settings/permissions",
           // },
-          
+
+        ],
+      },
+      {
+        title: "Documentation",
+        url: "/documentation",
+        icon: BookOpen,
+        items: [
+          // {
+          //   title: "Project Settings",
+          //   url: projectId ? `/dashboard/project/${projectId}/settings` : "/dashboard/settings/project",
+          // },
+          {
+            title: "Documentation",
+            url: "/documentation",
+          },
+          // {
+          //   title: "Permissions",
+          //   url: projectId ? `/dashboard/project/${projectId}/settings/permissions` : "/dashboard/settings/permissions",
+          // },
+
         ],
       },
     ],
