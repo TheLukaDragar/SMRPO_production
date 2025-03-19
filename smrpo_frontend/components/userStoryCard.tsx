@@ -26,13 +26,16 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editedStory, setEditedStory] = useState<UserStory>({...storyData});
     const [storyTasks, setStoryTasks] = useState<tasks[]>([]);
+    const [taskTimeInputs, setTaskTimeInputs] = useState<Record<string, string>>({});
+
 
     const [newTask, setNewTask] = useState<Partial<tasks_noId>>({
         userStoryId: ID,
         IsCompleted: false,
         description: "",
         isAccepted: false,
-        AssignedTo: null
+        AssignedTo: null,
+        timeLogged: 0
     });
 
 
@@ -48,6 +51,12 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                 const response = await getTasks()
                 const filtered = response.filter((task: tasks) => task.userStoryId == draggableId)
                 setStoryTasks(filtered);
+
+                const initialTimeInputs: Record<string, string> = {};
+                filtered.forEach(task => {
+                    initialTimeInputs[task._id] = "";
+                });
+                setTaskTimeInputs(initialTimeInputs);
 
             } catch (error) {
                 console.error("Error fetching tasks:", error);
@@ -148,8 +157,10 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
         setNewTask({
             userStoryId: ID,
             IsCompleted: false,
+            description: "",
             isAccepted: false,
-            AssignedTo: null
+            AssignedTo: null,
+            timeLogged: 0
         });
     };
 
@@ -163,7 +174,8 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                 IsCompleted: false,
                 isAccepted: false,
                 dueDate: newTask.dueDate || new Date(),
-                AssignedTo: newTask.AssignedTo || null
+                AssignedTo: newTask.AssignedTo || null,
+                timeLogged: 0
             };
 
             const result = await addTask(taskToAdd);
@@ -174,6 +186,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
             };
 
             setStoryTasks([...storyTasks, updatedTaskId]);
+            resetNewTaskForm();
         }
         catch (error) {
             console.error("Error adding task:", error);
@@ -224,6 +237,51 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
             console.error("Error updating task:", error);
         }
     };
+
+    const handleTimeInputChange = (e: React.ChangeEvent<HTMLInputElement>, taskId: string) => {
+        const { value } = e.target;
+        setTaskTimeInputs(prev => ({
+            ...prev,
+            [taskId]: value
+        }));
+    };
+
+    const logTime = async (e: React.MouseEvent<HTMLButtonElement>, task: tasks) => {
+        e.preventDefault();
+
+        const timeValue = taskTimeInputs[task._id];
+
+        if (!timeValue || isNaN(Number(timeValue)) || Number(timeValue) <= 0) {
+            alert("Please enter a valid time value");
+            return;
+        }
+
+        try {
+            const currentTime = task.timeLogged ? Number(task.timeLogged) : 0;
+            const newTime = currentTime + Number(timeValue);
+
+            const updatedTask = {
+                ...task,
+                timeLogged: newTime
+            };
+
+            await updateTask(updatedTask);
+
+            setStoryTasks(prev =>
+                prev.map(t => t._id === task._id ? updatedTask : t)
+            );
+
+            setTaskTimeInputs(prev => ({
+                ...prev,
+                [task._id]: ""
+            }));
+
+        } catch (error) {
+            console.error("Error logging time:", error);
+            alert("Failed to log time. Please try again.");
+        }
+    };
+
 
     return (
         <div>
@@ -429,6 +487,32 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                                             </div>
                                                             <div className="text-sm text-gray-500 mt-1">
                                                                 Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Not set'}
+                                                            </div>
+                                                            <div className="text-sm text-gray-500 mt-1">
+                                                                Logged time: {task.timeLogged || 0} hours
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="px-2 py-1 rounded">
+                                                            <label htmlFor={`timeInput-${task._id}`} className="block mb-1 font-medium">Log time:</label>
+                                                            <div className="flex">
+                                                                <input
+                                                                    id={`timeInput-${task._id}`}
+                                                                    type="number"
+                                                                    min="0.5"
+                                                                    step="0.5"
+                                                                    value={taskTimeInputs[task._id] || ""}
+                                                                    onChange={(e) => handleTimeInputChange(e, task._id)}
+                                                                    className="rounded border px-2 py-1 w-20"
+                                                                    placeholder="Hours"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => logTime(e, task)}
+                                                                    className="ml-2 px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                                >
+                                                                    Log
+                                                                </button>
                                                             </div>
                                                         </div>
 
