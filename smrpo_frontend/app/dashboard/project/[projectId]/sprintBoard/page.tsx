@@ -19,6 +19,7 @@ import { TimeLoggingPopup } from '@/components/TimeLoggingPopup';
 import AddSprintModal from '@/components/AddSprintModal';
 import {useUser} from "@/lib/hooks/useUser";
 import BacklogTable from "@/components/backlog-table";
+import { use } from 'react';
 
 export default function DNDPage({ params }: { params: { projectId: string } }) {
     const [isRefetching, setIsRefetching] = useState(false);
@@ -31,8 +32,7 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
     const [isSprintModalOpen, setIsSprintModalOpen] = useState(false);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-    const projectId = params.projectId; // Get projectId from URL params
-
+    const projectId = use(params).projectId;
     const { user } = useUser();
 
     const renderLoading = () => (
