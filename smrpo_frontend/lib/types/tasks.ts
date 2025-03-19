@@ -9,7 +9,7 @@ export interface tasks {
     isAccepted: boolean;
     timeLogged: number;
     dueDate: Date;
-    AssignedTo: User;
+    AssignedTo?: User;
 }
 
 export interface tasks_noId {
@@ -20,5 +20,5 @@ export interface tasks_noId {
     isAccepted: boolean;
     timeLogged: number;
     dueDate: Date;
-    AssignedTo: User;
+    AssignedTo?: User;
 }

@@ -255,6 +255,17 @@ export async function addProjectMember(projectId: string, userId: string, role: 
         const validatedData = validateAddProjectMember({ userId, role });
 
         const { db } = await connectToDatabase();
+
+        // Check if user is already a member
+        const existingMember = await db().collection('projects').findOne({
+            _id: new ObjectId(projectId),
+            'members.userId': userId
+        });
+
+        if (existingMember) {
+            throw new AppError('User is already a member of this project', 400, 'ValidationError');
+        }
+
         const result = await db().collection('projects').updateOne(
             { _id: new ObjectId(projectId) },
             {

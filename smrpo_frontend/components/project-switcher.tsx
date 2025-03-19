@@ -6,6 +6,7 @@ import { Project } from "@/lib/types/project-types"
 import { useProject } from "@/lib/contexts/project-context"
 import { useRouter, usePathname } from "next/navigation"
 import { useUser } from "@/lib/hooks/useUser"
+import { useEffect } from "react"
 
 import {
   DropdownMenu,
@@ -31,22 +32,39 @@ export function ProjectSwitcher() {
   const { activeProject, setActiveProject, projects, loading, error, refreshProjects } = useProject()
   const isAdmin = user?.role === "Administrator"
 
+  // Sync active project with URL on mount and pathname changes
+  useEffect(() => {
+    if (loading || !projects.length) return;
+
+    // Extract project ID from URL if we're in a project route
+    const projectIdMatch = pathname.match(/\/project\/([^/]+)/);
+    if (projectIdMatch) {
+      const urlProjectId = projectIdMatch[1];
+      const projectFromUrl = projects.find(p => p._id === urlProjectId);
+      
+      // Only update if we found a matching project and it's different from current
+      if (projectFromUrl && (!activeProject || activeProject._id !== urlProjectId)) {
+        console.log('Syncing active project with URL:', urlProjectId);
+        setActiveProject(projectFromUrl);
+      }
+    }
+  }, [pathname, projects, loading, activeProject, setActiveProject]);
+
   const handleProjectSelect = (project: Project) => {
     console.log('Selecting project:', project._id);
     setActiveProject(project);
 
     // Get the current path segments
     const pathSegments = pathname.split('/')
-    const currentProjectIndex = pathSegments.findIndex(segment => segment === 'project')
-
-    if (currentProjectIndex !== -1 && pathSegments[currentProjectIndex + 1]) {
-      // Replace the project ID in the current path
-      pathSegments[currentProjectIndex + 1] = project._id
-      const newPath = pathSegments.join('/')
-      router.push(newPath)
+    
+    // Check if we're in a project-specific route
+    if (pathname.includes('/project/')) {
+      // Replace or add the project ID in the path
+      const newPath = pathname.replace(/\/project\/[^/]+/, `/project/${project._id}`);
+      router.push(newPath);
     } else {
       // If not in a project-specific route, go to project overview
-      router.push(`/dashboard/project/${project._id}`)
+      router.push(`/dashboard/project/${project._id}`);
     }
   }
 

@@ -49,36 +49,62 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
         setIsAdmin(user?.role === "Administrator")
     }, [user]);
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
         setError("");
         setIsSubmitting(true);
+
+        // Validate all required fields
+        const validationErrors = [];
+        
+        if (!newUserStory.title.trim()) {
+            validationErrors.push("Title is required");
+        }
+        if (!newUserStory.description.trim()) {
+            validationErrors.push("Description is required");
+        }
+        if (!newUserStory.priority) {
+            validationErrors.push("Priority is required");
+        }
+        if (!newUserStory.storyPoints || newUserStory.storyPoints <= 0) {
+            validationErrors.push("Story points must be greater than 0");
+        }
+        if (!newUserStory.owner?._id) {
+            validationErrors.push("Owner is required");
+        }
+        if (!newUserStory.dueDate) {
+            validationErrors.push("Due date is required");
+        }
+
+        if (validationErrors.length > 0) {
+            setError(validationErrors.join(", "));
+            setIsSubmitting(false);
+            return;
+        }
 
         const updatedUserStory = {
             ...newUserStory,
             createdAt: new Date()
         };
 
-        const newStoryId = await addStory(updatedUserStory);
-
-        const updatedUserStoryId = {
-            _id: newStoryId.insertedId,
-            ...newUserStory
-        };
-
-        setItems([...items, updatedUserStoryId]);
-
-
         try {
+            const newStoryId = await addStory(updatedUserStory);
+
+            const updatedUserStoryId = {
+                _id: newStoryId.insertedId,
+                ...newUserStory
+            };
+
+            setItems([...items, updatedUserStoryId]);
             setIsModalOpen(false);
-            console.log(newUserStory);
-        } catch (error) {
-            setError(error.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An error occurred while adding the story');
         } finally {
             setIsSubmitting(false);
         }
     }
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         setNewUserStory({ ...newUserStory, [e.target.name]: e.target.value });
     };
 
@@ -155,21 +181,31 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                                         name="title"
                                         value={newUserStory.title}
                                         onChange={handleInputChange}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        className={`mt-1 block w-full border ${!newUserStory.title.trim() && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        placeholder="Enter story title"
+                                        required
                                     />
+                                    {!newUserStory.title.trim() && error && (
+                                        <p className="mt-1 text-sm text-red-500">Title is required</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label htmlFor="description" className="block text-sm font-medium text-gray-700">
                                         Description
                                     </label>
-                                    <input
-                                        type="textarea"
+                                    <textarea
                                         id="description"
                                         name="description"
                                         value={newUserStory.description}
                                         onChange={handleInputChange}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        className={`mt-1 block w-full border ${!newUserStory.description.trim() && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        rows={3}
+                                        placeholder="Enter story description"
+                                        required
                                     />
+                                    {!newUserStory.description.trim() && error && (
+                                        <p className="mt-1 text-sm text-red-500">Description is required</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label htmlFor="owner" className="block text-sm font-medium text-gray-700">
@@ -183,14 +219,19 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                                             const selectedUser = projectUsers.find(user => user._id === e.target.value);
                                             setNewUserStory({ ...newUserStory, owner: selectedUser || {} as User });
                                         }}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        className={`mt-1 block w-full border ${!newUserStory.owner?._id && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        required
                                     >
+                                        <option value="">Select an owner</option>
                                         {projectUsers.map((user) => (
                                             <option key={user._id} value={user._id}>
                                                 {user.userName}
                                             </option>
                                         ))}
                                     </select>
+                                    {!newUserStory.owner?._id && error && (
+                                        <p className="mt-1 text-sm text-red-500">Owner is required</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label htmlFor="priority" className="block text-sm font-medium text-gray-700">
@@ -201,17 +242,21 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                                         name="priority"
                                         value={newUserStory.priority}
                                         onChange={handleInputChange}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        className={`mt-1 block w-full border ${!newUserStory.priority && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        required
                                     >
                                         <option value="">Select priority</option>
                                         <option value="High">High</option>
                                         <option value="Medium">Medium</option>
                                         <option value="Low">Low</option>
                                     </select>
+                                    {!newUserStory.priority && error && (
+                                        <p className="mt-1 text-sm text-red-500">Priority is required</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label htmlFor="storyPoints" className="block text-sm font-medium text-gray-700">
-                                        Story Points
+                                        Story Points (Time Estimate)
                                     </label>
                                     <input
                                         type="number"
@@ -219,21 +264,14 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                                         name="storyPoints"
                                         value={newUserStory.storyPoints}
                                         onChange={handleInputChange}
-                                        min="0"
+                                        min="1"
                                         list="storypoints-options"
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        className={`mt-1 block w-full border ${(!newUserStory.storyPoints || newUserStory.storyPoints <= 0) && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        required
                                     />
-                                    <datalist id="storypoints-options">
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="5">5</option>
-                                        <option value="8">8</option>
-                                        <option value="13">13</option>
-                                        <option value="20">20</option>
-                                        <option value="40">40</option>
-                                        <option value="100">100</option>
-                                    </datalist>
+                                    {(!newUserStory.storyPoints || newUserStory.storyPoints <= 0) && error && (
+                                        <p className="mt-1 text-sm text-red-500">Story points must be greater than 0</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">
@@ -245,8 +283,12 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                                         name="dueDate"
                                         value={newUserStory.dueDate ? new Date(newUserStory.dueDate).toISOString().split('T')[0] : ''}
                                         onChange={handleInputChange}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        className={`mt-1 block w-full border ${!newUserStory.dueDate && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        required
                                     />
+                                    {!newUserStory.dueDate && error && (
+                                        <p className="mt-1 text-sm text-red-500">Due date is required</p>
+                                    )}
                                 </div>
                             </div>
 

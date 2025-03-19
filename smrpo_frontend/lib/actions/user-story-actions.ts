@@ -122,3 +122,15 @@ export async function updateTask(task: tasks) {
         modifiedCount: result.modifiedCount,
     };
 }
+
+export async function deleteTask(taskId: string) {
+    const { db } = await connectToDatabase();
+    const objectId = new ObjectId(taskId);
+
+    const result = await db().collection('tasks').deleteOne({ _id: objectId });
+
+    return {
+        acknowledged: result.acknowledged,
+        deletedCount: result.deletedCount,
+    };
+}

@@ -4,9 +4,17 @@ import React, {useEffect, useState} from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import {UserStory} from "@/lib/types/user-story-types";
 import {useUser} from "@/lib/hooks/useUser";
-import {updateStory, addTask, getTasks, updateTask} from "@/lib/actions/user-story-actions";
-import {tasks, tasks_noId} from "@/lib/types/tasks";
+import {updateStory, getTasks} from "@/lib/actions/user-story-actions";
+import {tasks} from "@/lib/types/tasks";
 import {User} from "@/lib/types/user-types";
+import { TaskCard } from "@/components/TaskCard";
+import { AddTaskForm } from "@/components/AddTaskForm";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface UserStoryCardProps {
     ID: string;
@@ -26,45 +34,14 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editedStory, setEditedStory] = useState<UserStory>({...storyData});
     const [storyTasks, setStoryTasks] = useState<tasks[]>([]);
-    const [taskTimeInputs, setTaskTimeInputs] = useState<Record<string, string>>({});
-
-
-    const [newTask, setNewTask] = useState<Partial<tasks_noId>>({
-        userStoryId: ID,
-        IsCompleted: false,
-        description: "",
-        isAccepted: false,
-        AssignedTo: null,
-        timeLogged: 0
-    });
-
+    const [isTasksOpen, setIsTasksOpen] = useState(true);
 
     useEffect(() => {
         setIsScrumMaster(userRole === "SCRUM_MASTER");
         setIsDeveloper(userRole === "DEVELOPER" || userRole === "SCRUM_MASTER");
         validateStory();
-        console.log("team", team);
-
-
-        const fetchTasks = async () => {
-            try {
-                const response = await getTasks()
-                const filtered = response.filter((task: tasks) => task.userStoryId == draggableId)
-                setStoryTasks(filtered);
-
-                const initialTimeInputs: Record<string, string> = {};
-                filtered.forEach(task => {
-                    initialTimeInputs[task._id] = "";
-                });
-                setTaskTimeInputs(initialTimeInputs);
-
-            } catch (error) {
-                console.error("Error fetching tasks:", error);
-            }
-        };
-
         fetchTasks();
-    }, [user, storyData, ID]);
+    }, [user, storyData, ID, draggableId, userRole]);
 
     useEffect(() => {
         setEditedStory({...storyData});
@@ -78,7 +55,6 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
             valid = false;
             message = "Missing time estimate";
         }
-
         else if (storyData.SprintPosition === "Done") {
             valid = false;
             message = "Story already completed";
@@ -121,167 +97,26 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
         }));
     };
 
-    const handleTaskInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-
-        if (name === "AssignedTo") {
-            if (!value || value === "") {
-                setNewTask(prev => ({
-                    ...prev,
-                    AssignedTo: undefined
-                }));
-            } else {
-                const selectedMember = team.find(member => member._id === value);
-                setNewTask(prev => ({
-                    ...prev,
-                    AssignedTo: selectedMember
-                }));
-            }
-        } else {
-            setNewTask(prev => ({
-                ...prev,
-                [name]: value
-            }));
-        }
-    };
-
-    const handleTaskDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setNewTask(prev => ({
-            ...prev,
-            [name]: value ? new Date(value) : null
-        }));
-    };
-
-    const resetNewTaskForm = () => {
-        setNewTask({
-            userStoryId: ID,
-            IsCompleted: false,
-            description: "",
-            isAccepted: false,
-            AssignedTo: null,
-            timeLogged: 0
-        });
-    };
-
-    const handleAddTask = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        try {
-            const taskToAdd: tasks_noId = {
-                userStoryId: draggableId,
-                description: newTask.description || "",
-                IsCompleted: false,
-                isAccepted: false,
-                dueDate: newTask.dueDate || new Date(),
-                AssignedTo: newTask.AssignedTo || null,
-                timeLogged: 0
-            };
-
-            const result = await addTask(taskToAdd);
-
-            const updatedTaskId = {
-                _id: result.insertedId,
-                ...taskToAdd
-            };
-
-            setStoryTasks([...storyTasks, updatedTaskId]);
-            resetNewTaskForm();
-        }
-        catch (error) {
-            console.error("Error adding task:", error);
-        }
-    }
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         updateStory(editedStory)
         setIsModalOpen(false);
     };
 
-    const handleTaskCompletion = async (task: tasks) => {
+    const handleTaskAdded = (newTask: tasks) => {
+        setStoryTasks(prev => [...prev, newTask]);
+        fetchTasks();
+    };
+
+    const fetchTasks = async () => {
         try {
-            const updatedTask = {
-                ...task,
-                IsCompleted: !task.IsCompleted
-            };
-
-            await updateTask(updatedTask);
-
-            setStoryTasks(prev =>
-                prev.map(t => t._id === task._id ? updatedTask : t)
-            );
+            const response = await getTasks()
+            const filtered = response.filter((task: tasks) => task.userStoryId == draggableId)
+            setStoryTasks(filtered);
         } catch (error) {
-            console.error("Error updating task:", error);
+            console.error("Error fetching tasks:", error);
         }
     };
-
-    const handleTaskAcceptance = async (task: tasks) => {
-        try {
-            if (!user || (task.AssignedTo && task.AssignedTo._id !== user._id)) {
-                alert("Only the assigned user can accept this task");
-                return;
-            }
-
-            const updatedTask = {
-                ...task,
-                isAccepted: !task.isAccepted
-            };
-
-            await updateTask(updatedTask);
-
-            setStoryTasks(prev =>
-                prev.map(t => t._id === task._id ? updatedTask : t)
-            );
-        } catch (error) {
-            console.error("Error updating task:", error);
-        }
-    };
-
-    const handleTimeInputChange = (e: React.ChangeEvent<HTMLInputElement>, taskId: string) => {
-        const { value } = e.target;
-        setTaskTimeInputs(prev => ({
-            ...prev,
-            [taskId]: value
-        }));
-    };
-
-    const logTime = async (e: React.MouseEvent<HTMLButtonElement>, task: tasks) => {
-        e.preventDefault();
-
-        const timeValue = taskTimeInputs[task._id];
-
-        if (!timeValue || isNaN(Number(timeValue)) || Number(timeValue) <= 0) {
-            alert("Please enter a valid time value");
-            return;
-        }
-
-        try {
-            const currentTime = task.timeLogged ? Number(task.timeLogged) : 0;
-            const newTime = currentTime + Number(timeValue);
-
-            const updatedTask = {
-                ...task,
-                timeLogged: newTime
-            };
-
-            await updateTask(updatedTask);
-
-            setStoryTasks(prev =>
-                prev.map(t => t._id === task._id ? updatedTask : t)
-            );
-
-            setTaskTimeInputs(prev => ({
-                ...prev,
-                [task._id]: ""
-            }));
-
-        } catch (error) {
-            console.error("Error logging time:", error);
-            alert("Failed to log time. Please try again.");
-        }
-    };
-
 
     return (
         <div>
@@ -301,7 +136,6 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                               ${snapshot.isDragging ? 'ring-2 ring-blue-500' : ''}
                               ${!isValid ? 'opacity-75' : ''}`}
                         onDoubleClick={handleDoubleClick}
-
                     >
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-semibold text-gray-800">{storyData.title}</h3>
@@ -338,42 +172,39 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                         </div>
 
                         {storyTasks.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                                <h4 className="font-semibold text-gray-700 mb-2">Tasks ({storyTasks.length})</h4>
-                                <div className="space-y-2">
-                                    {storyTasks.map((task) => (
-                                        <div key={task._id} className="flex items-center p-2 bg-gray-50 rounded text-sm">
-                                            <div className={`flex-1 ${task.IsCompleted ? 'line-through text-gray-400' : ''}`}>
-                                                <div>{task.description || "No description"}</div>
-                                                <div className="text-xs text-gray-500">
-                                                    Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Not set'}
-                                                </div>
-                                            </div>
-                                            <div className="text-xs ml-2 flex flex-col items-end space-y-1">
-                                                {task.AssignedTo && (
-                                                    <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
-                                                    {task.AssignedTo.userName}
-                                                </span>
-                                                )}
-                                                {task.isAccepted ? (
-                                                    <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded">
-                                                    Accepted
-                                                </span>
-                                                ) : task.AssignedTo ? (
-                                                    <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-                                                    Pending
-                                                </span>
-                                                ) : null}
-                                                {task.IsCompleted && (
-                                                    <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
-                                                    Completed
-                                                </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
+                            <Collapsible
+                                open={isTasksOpen}
+                                onOpenChange={setIsTasksOpen}
+                                className="mt-4 pt-4 border-t border-gray-200"
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <CollapsibleTrigger className="flex items-center gap-2 hover:text-blue-600">
+                                        <h4 className="font-semibold text-gray-700">Tasks ({storyTasks.length})</h4>
+                                        {isTasksOpen ? (
+                                            <ChevronUp className="h-4 w-4" />
+                                        ) : (
+                                            <ChevronDown className="h-4 w-4" />
+                                        )}
+                                    </CollapsibleTrigger>
                                 </div>
-                            </div>
+                                <CollapsibleContent className="space-y-3">
+                                    {storyTasks.map((task) => (
+                                        <TaskCard
+                                            key={task._id}
+                                            task={task}
+                                            isScrumMaster={isScrumMaster}
+                                            onTaskUpdated={(updatedTask) => {
+                                                setStoryTasks(prev =>
+                                                    prev.map(t => t._id === updatedTask._id ? updatedTask : t)
+                                                );
+                                            }}
+                                            onTaskDeleted={(taskId) => {
+                                                setStoryTasks(prev => prev.filter(t => t._id !== taskId));
+                                            }}
+                                        />
+                                    ))}
+                                </CollapsibleContent>
+                            </Collapsible>
                         )}
                     </div>
                 )}
@@ -476,144 +307,39 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
 
                             <div className="mt-6 pt-6 border-t border-gray-200">
                                 <h3 className="text-lg font-semibold mb-4">Tasks</h3>
-                                        {storyTasks.length > 0 && (
-                                            <div className="mb-6 space-y-3">
-                                                <h4 className="text-md font-medium text-gray-700">Existing Tasks</h4>
-                                                {storyTasks.map((task) => (
-                                                    <div key={task._id} className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200">
-                                                        <div className="flex-1">
-                                                            <div className={task.IsCompleted ? 'line-through text-gray-400' : ''}>
-                                                                {task.description}
-                                                            </div>
-                                                            <div className="text-sm text-gray-500 mt-1">
-                                                                Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Not set'}
-                                                            </div>
-                                                            <div className="text-sm text-gray-500 mt-1">
-                                                                Logged time: {task.timeLogged || 0} hours
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="px-2 py-1 rounded">
-                                                            <label htmlFor={`timeInput-${task._id}`} className="block mb-1 font-medium">Log time:</label>
-                                                            <div className="flex">
-                                                                <input
-                                                                    id={`timeInput-${task._id}`}
-                                                                    type="number"
-                                                                    min="0.5"
-                                                                    step="0.5"
-                                                                    value={taskTimeInputs[task._id] || ""}
-                                                                    onChange={(e) => handleTimeInputChange(e, task._id)}
-                                                                    className="rounded border px-2 py-1 w-20"
-                                                                    placeholder="Hours"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => logTime(e, task)}
-                                                                    className="ml-2 px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                                                >
-                                                                    Log
-                                                                </button>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center space-x-2">
-                                                            {task.AssignedTo && (
-                                                                <div className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                                                    {task.AssignedTo.userName}
-                                                                </div>
-                                                            )}
-
-                                                            <div className="flex space-x-2">
-                                                                {task.AssignedTo &&
-                                                                    task.AssignedTo._id === user?._id &&
-                                                                    !task.isAccepted && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleTaskAcceptance(task)}
-                                                                            className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
-                                                                        >
-                                                                            Accept
-                                                                        </button>
-                                                                    )}
-
-                                                                {task.AssignedTo &&
-                                                                    task.AssignedTo._id === user?._id &&
-                                                                    task.isAccepted &&
-                                                                    !task.IsCompleted && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleTaskCompletion(task)}
-                                                                            className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600"
-                                                                        >
-                                                                            Complete
-                                                                        </button>
-                                                                    )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        <div className="bg-gray-50 p-4 rounded border border-gray-200">
-                                            <h4 className="text-md font-medium text-gray-700 mb-3">Add New Task</h4>
-
-                                            <div className="space-y-3">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700">Description</label>
-                                                    <textarea
-                                                        name="description"
-                                                        value={newTask.description || ''}
-                                                        onChange={handleTaskInputChange}
-                                                        rows={2}
-                                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Due Date</label>
-                                                        <input
-                                                            type="date"
-                                                            name="dueDate"
-                                                            value={newTask.dueDate ? new Date(newTask.dueDate).toISOString().split('T')[0] : ''}
-                                                            onChange={handleTaskDateChange}
-                                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                            required
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Assign To (Optional)</label>
-                                                        <select
-                                                            name="AssignedTo"
-                                                            value={newTask.AssignedTo ? newTask.AssignedTo._id : ''}
-                                                            onChange={handleTaskInputChange}
-                                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                        >
-                                                            <option value="">Unassigned</option>
-                                                            {team && team.map(member => (
-                                                                <option key={member._id} value={member._id}>
-                                                                    {member.userName}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleAddTask}
-                                                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    >
-                                                        Add Task
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
+                                {storyTasks.length > 0 && (
+                                    <div className="mb-6 space-y-3">
+                                        <h4 className="text-md font-medium text-gray-700">Existing Tasks</h4>
+                                        {storyTasks.map((task) => (
+                                            <TaskCard
+                                                key={task._id}
+                                                task={task}
+                                                isScrumMaster={isScrumMaster}
+                                                onTaskUpdated={(updatedTask) => {
+                                                    setStoryTasks(prev =>
+                                                        prev.map(t => t._id === updatedTask._id ? updatedTask : t)
+                                                    );
+                                                }}
+                                                onTaskDeleted={(taskId) => {
+                                                    setStoryTasks(prev => prev.filter(t => t._id !== taskId));
+                                                }}
+                                            />
+                                        ))}
                                     </div>
+                                )}
+
+                                <div className="bg-gray-50 p-4 rounded border border-gray-200">
+                                    <h4 className="text-md font-medium text-gray-700 mb-3">Add New Task</h4>
+                                    <AddTaskForm
+                                        userStoryId={draggableId}
+                                        team={team}
+                                        isDeveloper={isDeveloper}
+                                        isScrumMaster={isScrumMaster}
+                                        sprintPosition={storyData.SprintPosition}
+                                        onTaskAdded={handleTaskAdded}
+                                    />
+                                </div>
+                            </div>
 
                             <div className="flex justify-end space-x-3 pt-4">
                                 <button

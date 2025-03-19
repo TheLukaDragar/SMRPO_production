@@ -119,6 +119,9 @@ export function AddTeamMemberDialog({
           description: "Team member added successfully",
         })
         
+        // Reset dialog state
+        setSelectedUser(null)
+        setSearchQuery("")
         setOpen(false)
         onSuccess?.()
       }

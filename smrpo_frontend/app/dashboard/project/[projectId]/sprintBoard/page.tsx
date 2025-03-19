@@ -20,18 +20,18 @@ import AddSprintModal from '@/components/AddSprintModal';
 import {useUser} from "@/lib/hooks/useUser";
 import BacklogTable from "@/components/backlog-table";
 
-export default function DNDPage() {
+export default function DNDPage({ params }: { params: { projectId: string } }) {
     const [isRefetching, setIsRefetching] = useState(false);
     const [stories, setStories] = useState<UserStory[]>([]);
     const [columns, setColumns] = useState<sprint[]>([]);
     const [allSprints, setAllSprints] = useState<sprint[]>([]);
     const [projectUsers, setProjectUsers] = useState<User[]>([]);
-    const { activeProject, loading, refreshProjects } = useProject();
+    const { loading, refreshProjects } = useProject();
     const [selectedStory, setSelectedStory] = useState<UserStory | null>(null);
     const [isSprintModalOpen, setIsSprintModalOpen] = useState(false);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-
+    const projectId = params.projectId; // Get projectId from URL params
 
     const { user } = useUser();
 
@@ -45,7 +45,13 @@ export default function DNDPage() {
         try {
             setIsRefetching(true);
             setIsLoadingUsers(true);
-            const users = await getProjectMembers(activeProject?._id);
+            if (!projectId) {
+                console.log("No project ID");
+                setIsLoadingUsers(false);
+                setIsRefetching(false);
+                return;
+            }
+            const users = await getProjectMembers(projectId);
             console.log('Users JSON:', JSON.stringify(users));
 
             if (user && user._id) {
@@ -53,9 +59,12 @@ export default function DNDPage() {
                 console.log("curr u;", user)
 
                 const currentUserInProject = users.filter((projectUser: any) => projectUser.userId == user._id);
-                if (currentUserInProject) {
+                if (currentUserInProject && currentUserInProject.length > 0) {
                     setUserRole(currentUserInProject[0].role);
                     console.log("Current user role:", currentUserInProject[0].role);
+                } else {
+                    setUserRole(null);
+                    console.log("User not found in project members");
                 }
             }
             const usr_ids = users.map((user: any) => user.userId);
@@ -71,18 +80,18 @@ export default function DNDPage() {
         } finally {
             setIsRefetching(false);
         }
-    }, [activeProject, user]);
+    }, [projectId, user]);
 
     const fetchSprints = useCallback(async () => {
         try {
             setIsRefetching(true);
             const sprints = await getAllSprints();
             const projSprint = sprints.filter(
-                (sprint: sprint) => sprint.projectId === activeProject?._id
+                (sprint: sprint) => sprint.projectId === projectId
             );
             setAllSprints(projSprint);
             const activeSprints = sprints.filter(
-                (sprint: sprint) => sprint.isActive && sprint.projectId === activeProject?._id
+                (sprint: sprint) => sprint.isActive && sprint.projectId === projectId
             );
             console.log("all sprints: ", sprints);
             console.log("active sprints: ", activeSprints);
@@ -94,7 +103,7 @@ export default function DNDPage() {
         } finally {
             setIsRefetching(false);
         }
-    }, [activeProject]);
+    }, [projectId]);
 
     const fetchStories = useCallback(async () => {
         try {
@@ -128,12 +137,12 @@ export default function DNDPage() {
     }, [projectUsers]);
 
     useEffect(() => {
-        if (!activeProject?._id) return;
+        if (!projectId) return;
         fetchStories();
         fetchSprints();
         fetchProjectUsers();
         console.log("role: ", userRole)
-    }, [activeProject, fetchProjectUsers, fetchSprints, fetchStories]);
+    }, [projectId, fetchProjectUsers, fetchSprints, fetchStories]);
 
     const handleDragEnd = (result: DropResult) => {
         if (!result.destination) return;
@@ -170,13 +179,13 @@ export default function DNDPage() {
                 await updateSprint(updatedSprint);
 
                 setColumns(columns.filter(col =>
-                    (col._id !== updatedSprint._id) && col.isActive && col.projectId === activeProject?._id
+                    (col._id !== updatedSprint._id) && col.isActive && col.projectId === projectId
                 ));
             }
 
             const sprintNumber = allSprints.length + 1;
             const toAdd = {
-                projectId: activeProject?._id,
+                projectId: projectId,
                 sprintName: name || `Sprint ${sprintNumber}`,
                 isActive: true,
                 sprintParts: ['Sprint Backlog', 'Development', 'Testing', 'Acceptance', 'Done'],
@@ -224,13 +233,13 @@ export default function DNDPage() {
                             <div className="mb-8">
                                 <h2 className="text-xl font-semibold mb-4">Product Backlog</h2>
                                 <BacklogTable
-                                    droppableId={`${activeProject?._id}-backlog`}
-                                    key={`${activeProject?._id}-backlog`}
+                                    droppableId={`${projectId}-backlog`}
+                                    key={`${projectId}-backlog`}
                                     title={"Product Backlog"}
-                                    items={stories.filter(story => story.SprintPosition === "backlog" && story.sprintID === activeProject?._id)}
+                                    items={stories.filter(story => story.SprintPosition === "backlog" && story.sprintID === projectId)}
                                     projectUsers={projectUsers}
                                     setItems={setStories}
-                                    userRole={userRole}
+                                    userRole={userRole || undefined}
                                 />
                             </div>
 
@@ -263,7 +272,7 @@ export default function DNDPage() {
                                                             items={stories.filter(story => story.SprintPosition === part && story.sprintID === sprint._id)}
                                                             projectUsers={projectUsers}
                                                             setItems={setStories}
-                                                            userRole={userRole}
+                                                            userRole={userRole || undefined}
                                                         />
                                                     ))}
                                                 </div>

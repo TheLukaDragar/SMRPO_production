@@ -35,6 +35,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 
 // Navigation data generator function
 const getNavData = (projectId?: string, isAdmin?: boolean) => {
+  console.log("projectId", projectId);
   const navItems = {
     navMain: [
       {
@@ -157,7 +158,7 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const { activeProject } = useProject();
   const isAdmin = user.role === "Administrator";
-  const navData = getNavData(activeProject?._id, isAdmin);
+  const navData = React.useMemo(() => getNavData(activeProject?._id, isAdmin), [activeProject?._id, isAdmin]);
 
   return (
     <Sidebar collapsible="icon" {...props}>
