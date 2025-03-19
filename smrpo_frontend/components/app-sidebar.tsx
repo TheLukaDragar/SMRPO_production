@@ -90,6 +90,19 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
       //   ],
       // },
       {
+        title: "User Settings",
+        url: "/",
+        icon: Settings2,
+        items: [
+          {
+            title: "Team Members",
+            url: "/profile",
+          },
+        ]
+      },
+
+
+      {
         title: "Project Settings",
         url: "/dashboard/settings",
         icon: Settings2,
