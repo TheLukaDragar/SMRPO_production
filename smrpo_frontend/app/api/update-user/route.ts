@@ -1,13 +1,26 @@
 import { NextResponse } from 'next/server'
 import { Pool } from 'pg'
 import bcrypt from 'bcryptjs'
+import { UserRole } from '@/lib/types/user-types';
+import {UserStoryNoId, UserStory} from "@/lib/types/user-story-types";
+
+const getRoleBadgeColor = (role: string) => {
+  switch(role.toLowerCase()) {
+      case 'administrator':
+          return 'bg-red-100 text-red-800';
+      case 'developer':
+          return 'bg-blue-100 text-blue-800';
+      default:
+          return 'bg-gray-100 text-gray-800';
+  }
+};
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 })
 
 export async function GET() {
-  return NextResponse.json({ message: 'Use POST to update user' })
+  return NextResponse.json({ message: 'Use POST to update userssss' })
 }
 
 export async function POST(request: Request) {
@@ -23,6 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Email is required.' }, { status: 400 })
     }
 
+    // Build the update query parts
     const updateClauses: string[] = []
     const values: any[] = []
     let paramIndex = 1
@@ -40,6 +54,7 @@ export async function POST(request: Request) {
       values.push(lastName)
     }
     if (password) {
+      // Hash the new password
       const hashed = await bcrypt.hash(password, 10)
       updateClauses.push(`"password" = $${paramIndex++}`)
       values.push(hashed)
@@ -49,6 +64,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'No fields to update.' }, { status: 400 })
     }
 
+    // Use the provided email to find the user
     values.push(email)
     const sql = `
       UPDATE users

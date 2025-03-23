@@ -1,44 +1,65 @@
-'use client'
+//// filepath: c:\Users\user\Documents\GitHub\Faks FRI\SMRPO\SMRPO\smrpo_frontend\app\profile\page.tsx
+"use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useUser } from '@/lib/hooks/useUser'
-import { Button } from '@/components/ui/button'
+import React, { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useUser } from "@/lib/hooks/useUser"
+import { Button } from "@/components/ui/button"
+import { updateUser, User } from "@/lib/actions/user-actions"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function ProfilePage() {
   const { user } = useUser()
   const router = useRouter()
+  const { toast } = useToast()
 
-  const [userName, setUserName] = useState(user?.userName || '')
-  const [firstName, setFirstName] = useState(user?.firstName || '')
-  const [lastName, setLastName] = useState(user?.lastName || '')
-  const [email, setEmail] = useState(user?.email || '')
-  const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
+  const [userName, setUserName] = useState(user?.userName || "")
+  const [firstName, setFirstName] = useState(user?.firstName || "")
+  const [lastName, setLastName] = useState(user?.lastName || "")
+  const [email, setEmail] = useState(user?.email || "")
+  const [password, setPassword] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const formData = new FormData()
-    formData.append('userName', userName)
-    formData.append('firstName', firstName)
-    formData.append('lastName', lastName)
-    formData.append('email', email)
-    if (password) {
-      formData.append('password', password)
-    }
+    setIsSubmitting(true)
 
     try {
-      const res = await fetch('/api/update-user', {
-        method: 'POST',
-        body: formData,
-      })
-      if (!res.ok) {
-        throw new Error('Failed to update profile')
+      // Build an object with updated user fields.
+      const updatedUserData: Partial<User> = {
+        userName,
+        firstName,
+        lastName,
+        email,
       }
-      setMessage('Profile updated successfully!')
-      router.refresh()
-    } catch (error) {
-      setMessage('An error occurred. Please try again.')
+      // Only update password if a new one is provided.
+      if (password) {
+        updatedUserData.password = password
+      }
+
+      const result = await updateUser(user!._id, updatedUserData)
+
+      if ("error" in result) {
+        toast({
+          variant: "destructive",
+          title: "Error updating profile",
+          description: result.error.message,
+        })
+      } else {
+        toast({
+          variant: "success",
+          title: "Success",
+          description: "Profile updated successfully",
+        })
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "An unexpected error occurred",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -81,8 +102,9 @@ export default function ProfilePage() {
           placeholder="New Password (leave empty to keep current)"
           className="input"
         />
-        <Button type="submit">Update Profile</Button>
-        {message && <p>{message}</p>}
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Updating..." : "Update Profile"}
+        </Button>
       </form>
     </div>
   )
