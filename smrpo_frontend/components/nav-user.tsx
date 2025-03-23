@@ -1,15 +1,12 @@
 "use client"
 
+import { useRouter } from 'next/navigation'
 import {
   BadgeCheck,
   Bell,
-  ChevronsUpDown,
-  CreditCard,
-  Link,
   LogOut,
-  Sparkles,
+  ChevronsUpDown,
 } from "lucide-react"
-
 import {
   Avatar,
   AvatarFallback,
@@ -39,6 +36,7 @@ interface NavUserProps {
 
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
 
   const handleLogout = async () => {
     await logout();
@@ -55,7 +53,9 @@ export function NavUser({ user }: NavUserProps) {
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={`https://avatar.vercel.sh/${user.email}`} alt={user.userName} />
-                <AvatarFallback className="rounded-lg">{user.firstName[0]}{user.lastName[0]}</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {user.firstName[0]}{user.lastName[0]}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{`${user.firstName} ${user.lastName}`}</span>
@@ -74,7 +74,9 @@ export function NavUser({ user }: NavUserProps) {
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={`https://avatar.vercel.sh/${user.email}`} alt={user.userName} />
-                  <AvatarFallback className="rounded-lg">{user.firstName[0]}{user.lastName[0]}</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">
+                    {user.firstName[0]}{user.lastName[0]}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{`${user.firstName} ${user.lastName}`}</span>
@@ -84,7 +86,7 @@ export function NavUser({ user }: NavUserProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/profile')}>
                 <BadgeCheck className="mr-2 h-4 w-4" />
                 Account
               </DropdownMenuItem>
