@@ -1,84 +1,70 @@
-import { NextResponse } from 'next/server';
-import { MongoClient, Db } from 'mongodb';
-import bcrypt from 'bcryptjs';
+import { NextResponse } from 'next/server'
+import { Pool } from 'pg'
+import bcrypt from 'bcryptjs'
 
-const uri = process.env.MONGODB_URI; // e.g., "mongodb+srv://user:password@cluster.mongodb.net"
-const dbName = process.env.MONGODB_DB; // e.g., "mydatabase"
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+})
 
-let cachedClient: MongoClient;
-let cachedDb: Db;
-
-async function connectToDatabase() {
-  if (cachedDb) {
-    return { client: cachedClient, db: cachedDb };
-  }
-  if (!uri) {
-    throw new Error('Please define the MONGODB_URI environment variable');
-  }
-  if (!dbName) {
-    throw new Error('Please define the MONGODB_DB environment variable');
-  }
-  const client = new MongoClient(uri);
-  await client.connect();
-  const db = client.db(dbName);
-  cachedClient = client;
-  cachedDb = db;
-  return { client, db };
+export async function GET() {
+  return NextResponse.json({ message: 'Use POST to update user' })
 }
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const userName = formData.get('userName')?.toString();
-    const firstName = formData.get('firstName')?.toString();
-    const lastName = formData.get('lastName')?.toString();
-    const email = formData.get('email')?.toString();
-    const password = formData.get('password')?.toString();
+    const formData = await request.formData()
+    const userName = formData.get('userName')?.toString()
+    const firstName = formData.get('firstName')?.toString()
+    const lastName = formData.get('lastName')?.toString()
+    const email = formData.get('email')?.toString()
+    const password = formData.get('password')?.toString()
 
-    // Validate required fields
     if (!email) {
-      return NextResponse.json({ message: 'Email is required.' }, { status: 400 });
+      return NextResponse.json({ message: 'Email is required.' }, { status: 400 })
     }
 
-    // Build the update object
-    const updateData: {
-      userName?: string;
-      firstName?: string;
-      lastName?: string;
-      password?: string;
-    } = {};
+    const updateClauses: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
 
-    if (userName) updateData.userName = userName;
-    if (firstName) updateData.firstName = firstName;
-    if (lastName) updateData.lastName = lastName;
+    if (userName) {
+      updateClauses.push(`"userName" = $${paramIndex++}`)
+      values.push(userName)
+    }
+    if (firstName) {
+      updateClauses.push(`"firstName" = $${paramIndex++}`)
+      values.push(firstName)
+    }
+    if (lastName) {
+      updateClauses.push(`"lastName" = $${paramIndex++}`)
+      values.push(lastName)
+    }
     if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      updateData.password = hashedPassword;
+      const hashed = await bcrypt.hash(password, 10)
+      updateClauses.push(`"password" = $${paramIndex++}`)
+      values.push(hashed)
     }
 
-    // Connect to MongoDB and get the users collection
-    const { db } = await connectToDatabase();
-    const usersCollection = db.collection('users');
-
-    // Update user using email as a unique identifier
-    const result = await usersCollection.updateOne(
-      { email },
-      { $set: updateData }
-    );
-
-    if (result.modifiedCount === 0) {
-      return NextResponse.json({ message: 'User not found or no changes provided.' }, { status: 404 });
+    if (updateClauses.length === 0) {
+      return NextResponse.json({ message: 'No fields to update.' }, { status: 400 })
     }
 
-    // Optionally, return the updated user document
-    const updatedUser = await usersCollection.findOne({ email });
+    values.push(email)
+    const sql = `
+      UPDATE users
+      SET ${updateClauses.join(', ')}
+      WHERE email = $${paramIndex}
+      RETURNING *
+    `
+    const result = await pool.query(sql, values)
 
-    return NextResponse.json(
-      { message: 'Profile updated successfully!', data: updatedUser },
-      { status: 200 }
-    );
+    if (result.rows.length === 0) {
+      return NextResponse.json({ message: 'User not found.' }, { status: 404 })
+    }
+
+    return NextResponse.json({ message: 'Profile updated!', data: result.rows[0] }, { status: 200 })
   } catch (error) {
-    console.error('Error updating profile:', error);
-    return NextResponse.json({ message: 'Failed to update profile' }, { status: 500 });
+    console.error('Error updating profile:', error)
+    return NextResponse.json({ message: 'Failed to update profile' }, { status: 500 })
   }
 }
