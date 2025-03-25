@@ -41,7 +41,7 @@ export function ProjectSwitcher() {
     if (projectIdMatch) {
       const urlProjectId = projectIdMatch[1];
       const projectFromUrl = projects.find(p => p._id === urlProjectId);
-      
+
       // Only update if we found a matching project and it's different from current
       if (projectFromUrl && (!activeProject || activeProject._id !== urlProjectId)) {
         console.log('Syncing active project with URL:', urlProjectId);
@@ -56,7 +56,7 @@ export function ProjectSwitcher() {
 
     // Get the current path segments
     const pathSegments = pathname.split('/')
-    
+
     // Check if we're in a project-specific route
     if (pathname.includes('/project/')) {
       // Replace or add the project ID in the path
@@ -196,11 +196,6 @@ export function ProjectSwitcher() {
                     {project.description && (
                       <span className="block text-xs text-muted-foreground truncate">
                         {project.description}
-                      </span>
-                    )}
-                    {project.estimated_time !== undefined && project.estimated_time !== 0 && (
-                      <span className="block text-xs font-medium text-gray-700">
-                        Estimated Time: {project.estimated_time} hours
                       </span>
                     )}
                   </div>

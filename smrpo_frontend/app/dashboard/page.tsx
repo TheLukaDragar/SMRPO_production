@@ -294,14 +294,7 @@ export default function DashboardPage() {
                     </p>
                   )}
 
-                  {/* Display Estimated Time */}
-                  {project.estimated_time !== undefined && project.estimated_time !== 0 && (
-                    <p className="text-sm font-medium text-gray-700">
-                      Estimated Time: {project.estimated_time} hours
-                    </p>
-                  )}
-
-                  {/* Display Team Members Below Estimated Time */}
+                  {/* Display Team Members */}
                   {project.members && project.members.length > 0 && (
                     <div className="mt-2">
                       <p className="text-sm font-medium text-gray-700">Team Members:</p>

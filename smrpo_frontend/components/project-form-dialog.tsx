@@ -279,26 +279,6 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
                         maxLength={500}
                       />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <label htmlFor="estimated_time" className="block text-sm font-medium text-gray-700">
-                        Estimated Time (hours)
-                      </label>
-                      <input
-                        id="estimated_time"
-                        name="estimated_time"
-                        type="number"
-                        placeholder="0"
-                        className="w-16 p-1 text-center border rounded-md"
-                        min="0"
-                        max="99"
-                        value={estimatedTime}
-                        onChange={(e) => {
-                          let value = e.target.value;
-                          if (value.length > 2) value = value.slice(0, 2);
-                          setEstimatedTime(value ? parseInt(value) : "");
-                        }}
-                      />
-                    </div>
                   </div>
                 </div>
               </div>
