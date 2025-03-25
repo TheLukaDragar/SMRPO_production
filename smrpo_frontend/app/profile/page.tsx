@@ -1,4 +1,3 @@
-//// filepath: c:\Users\user\Documents\GitHub\Faks FRI\SMRPO\SMRPO\smrpo_frontend\app\profile\page.tsx
 "use client"
 
 import React, { useState } from "react"

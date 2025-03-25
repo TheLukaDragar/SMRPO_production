@@ -15,7 +15,6 @@ import { sprint, sprintNoId } from "@/lib/types/sprint-types";
 import { useProject } from "@/lib/contexts/project-context";
 import { getProjectMembers } from "@/lib/actions/project-actions";
 import { getUsersByIds } from "@/lib/actions/user-actions";
-import { TimeLoggingPopup } from '@/components/TimeLoggingPopup';
 import AddSprintModal from '@/components/AddSprintModal';
 import {useUser} from "@/lib/hooks/useUser";
 import BacklogTable from "@/components/backlog-table";
@@ -300,37 +299,3 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
     );
 }
 
-/*
-
-                    {selectedStory && (
-                        <TimeLoggingPopup
-                            userStoryId={selectedStory._id}
-                            title={selectedStory.title}
-                            onClose={() => setSelectedStory(null)}
-                            onSave={handleTimeSave}
-                        />
-                    )}
-
-<div className="mt-10 bg-white p-6 rounded-lg shadow-sm">
-    <h2 className="text-xl font-bold mb-4">Time Logging</h2>
-    {stories.length > 0 ? (
-        <div className="space-y-2">
-            {stories.map(story => (
-                <div key={story._id} className="flex items-center justify-between p-3 border border-gray-200 mb-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
-                    <span className="font-medium">{story.title}</span>
-                    <button
-                        onClick={() => setSelectedStory(story)}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-                    >
-                        Log Time
-                    </button>
-                </div>
-            ))}
-        </div>
-    ) : (
-        <p className="text-gray-600 text-center">No user stories available for time logging.</p>
-    )}
-</div>
-
-
- */
