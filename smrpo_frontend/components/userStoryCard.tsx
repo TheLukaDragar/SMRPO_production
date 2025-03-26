@@ -15,6 +15,7 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import TextAreaTests from "@/components/TextAreaTests";
 
 interface UserStoryCardProps {
     ID: string;
@@ -147,9 +148,9 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                 )}
                                 <span
                                     className={`text-sm px-2 py-1 rounded-full ${
-                                        storyData.priority === 'High'
+                                        storyData.priority === 'Must have'
                                             ? 'bg-red-500 text-white'
-                                            : storyData.priority === 'Medium'
+                                            : storyData.priority === 'Should have'
                                                 ? 'bg-yellow-500 text-white'
                                                 : 'bg-green-500 text-white'
                                     }`}
@@ -166,7 +167,6 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                             <p className={!storyData.storyPoints ? "text-red-500" : ""}>
                                 <strong>Story Points:</strong> {storyData.storyPoints || "Not estimated"}
                             </p>
-                            <p><strong>Due Date:</strong> {storyData.dueDate ? new Date(storyData.dueDate).toLocaleDateString() : "Not set"}</p>
                             <p><strong>Status:</strong> {storyData.SprintPosition}</p>
                             <p className="col-span-2"><strong>Created:</strong> {new Date(storyData.createdAt).toLocaleDateString()}</p>
                         </div>
@@ -240,13 +240,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Description</label>
-                                <textarea
-                                    name="description"
-                                    value={editedStory.description || ''}
-                                    onChange={handleInputChange}
-                                    rows={3}
-                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                />
+                                <TextAreaTests input={editedStory}/>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -258,9 +252,9 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                         onChange={handleInputChange}
                                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     >
-                                        <option value="Low">Low</option>
-                                        <option value="Medium">Medium</option>
-                                        <option value="High">High</option>
+                                        <option value="Wont Have">Wont Have</option>
+                                        <option value="Should Have">Should Have</option>
+                                        <option value="Must have">Must have</option>
                                     </select>
                                 </div>
 
@@ -278,17 +272,6 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Due Date</label>
-                                    <input
-                                        type="date"
-                                        name="dueDate"
-                                        value={editedStory.dueDate ? new Date(editedStory.dueDate).toISOString().split('T')[0] : ''}
-                                        onChange={handleDateChange}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Sprint Position</label>
                                     <select

@@ -7,6 +7,7 @@ export interface tasks {
     timeEstimate: number;
     IsCompleted: boolean;
     isAccepted: boolean;
+    startLog: Date;
     timeLogged: number;
     dueDate: Date;
     AssignedTo?: User;
@@ -18,6 +19,7 @@ export interface tasks_noId {
     timeEstimate: number;
     IsCompleted: boolean;
     isAccepted: boolean;
+    startLog: Date;
     timeLogged: number;
     dueDate: Date;
     AssignedTo?: User;

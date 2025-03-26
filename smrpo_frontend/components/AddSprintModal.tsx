@@ -13,7 +13,7 @@ const AddSprintModal: React.FC<AddSprintModalProps> = ({ isOpen, onClose, onAdd,
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
     const [velocity, setVelocity] = useState<string>('');
-    const [sprintName, setSprintName] = useState<string>('');
+    const [sprintName, setSprintName] = useState<string>('Sprint: '+ existingSprints.length.toString());
     const [error, setError] = useState<string | null>(null);
 
     if (!isOpen) return null;
@@ -21,9 +21,20 @@ const AddSprintModal: React.FC<AddSprintModalProps> = ({ isOpen, onClose, onAdd,
     const validateForm = (): boolean => {
         setError(null);
 
+        console.log("ext spr", existingSprints);
+
+
         const start = new Date(startDate);
         const end = new Date(endDate);
         const currentDate = new Date();
+
+        const startDay = start.getDay()
+        const endDay = end.getDay()
+
+        if (startDay == 5 || startDay == 6 || endDay == 5 || endDay == 6 ) {
+            setError("Dates cannot be on weekends");
+            return false;
+        }
 
         // Validate start date
         if (start < new Date(currentDate.setHours(0, 0, 0, 0))) {
@@ -59,6 +70,7 @@ const AddSprintModal: React.FC<AddSprintModalProps> = ({ isOpen, onClose, onAdd,
             }
             return false;
         });
+
 
         if (hasOverlap) {
             setError("New sprint overlaps with an existing sprint");
@@ -129,7 +141,7 @@ const AddSprintModal: React.FC<AddSprintModalProps> = ({ isOpen, onClose, onAdd,
                     </div>
 
                     <div className="mb-4">
-                        <label className="block text-gray-700 mb-2">Expected Velocity</label>
+                        <label className="block text-gray-700 mb-2">Expected Velocity (in story points)</label>
                         <input
                             type="number"
                             value={velocity}

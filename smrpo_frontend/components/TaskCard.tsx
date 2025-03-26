@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar, Trash2 } from "lucide-react";
+import { Clock, Calendar, Trash2, Play, StopCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
@@ -24,9 +24,85 @@ interface TaskCardProps {
 export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: TaskCardProps) {
     const { user } = useUser();
     const [timeInput, setTimeInput] = React.useState("");
+    const [isTracking, setIsTracking] = React.useState(false);
+    const [elapsedTime, setElapsedTime] = React.useState(0);
+    const [startTime, setStartTime] = React.useState<Date | null>(null);
+    const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+
 
     const canDelete = !task.isAccepted && !task.IsCompleted && 
         (isScrumMaster || (task.AssignedTo && task.AssignedTo._id === user?._id));
+
+    const startTimeTracking = () => {
+        if (!user) {
+            alert("You must be logged in to log time");
+            return;
+        }
+
+        if (!task.isAccepted) {
+            alert("Task must be accepted before logging time");
+            return;
+        }
+
+        if (!task.AssignedTo || task.AssignedTo._id !== user._id) {
+            alert("Only the assigned user can log time for this task");
+            return;
+        }
+
+        setIsTracking(true);
+        const now = new Date();
+        setStartTime(now);
+
+        timerRef.current = setInterval(() => {
+            setElapsedTime(prev => prev + 1);
+        }, 1000);
+    };
+
+    const stopTimeTracking = async () => {
+        if (!startTime) return;
+
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+
+        const now = new Date();
+        const timeSpentMs = now.getTime() - startTime.getTime();
+        const timeSpentHours = timeSpentMs / (1000 * 60 * 60);
+
+        const roundedTimeSpent = Math.round(timeSpentHours * 1000) / 1000;
+
+        try {
+            const currentTime = task.timeLogged ? Number(task.timeLogged) : 0;
+            const newTime = currentTime + roundedTimeSpent;
+
+            console.log(timeSpentMs, timeSpentHours, roundedTimeSpent, newTime)
+
+            const updatedTask = {
+                ...task,
+                timeLogged: newTime
+            };
+
+            await updateTask(updatedTask);
+            onTaskUpdated(updatedTask);
+
+            setIsTracking(false);
+            setStartTime(null);
+            setElapsedTime(0);
+        } catch (error) {
+            console.error("Error logging time:", error);
+            alert("Failed to log time. Please try again.");
+        }
+    };
+
+    const formatElapsedTime = (seconds: number) => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
 
     const handleTaskAcceptance = async () => {
         try {
@@ -115,14 +191,9 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
             return;
         }
 
-        if (!timeInput || isNaN(Number(timeInput)) || Number(timeInput) <= 0) {
-            alert("Please enter a valid time value");
-            return;
-        }
-
         try {
             const currentTime = task.timeLogged ? Number(task.timeLogged) : 0;
-            const newTime = currentTime + Number(timeInput);
+            const newTime = currentTime + (task.startLog.getTime() - new Date().getTime());
 
             const updatedTask = {
                 ...task,
@@ -209,6 +280,16 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                     </div>
                 </div>
 
+                {/* Active timer display */}
+                {isTracking && (
+                    <div className="mt-3 py-2 px-3 bg-blue-50 border border-blue-100 rounded-md flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-blue-500 animate-pulse" />
+                        <span className="text-blue-700 font-medium">
+                            Time tracking: {formatElapsedTime(elapsedTime)}
+                        </span>
+                    </div>
+                )}
+
                 {(task.isAccepted || task.IsCompleted) && (
                     <div className="flex gap-2 mt-3">
                         {task.isAccepted && !task.IsCompleted && (
@@ -225,30 +306,34 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                 )}
 
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
-                    {task.AssignedTo && 
-                     task.AssignedTo._id === user?._id && 
-                     task.isAccepted &&
-                     !task.IsCompleted && (
-                        <div className="flex items-center gap-2">
-                            <Input
-                                type="number"
-                                min="0.5"
-                                step="0.5"
-                                value={timeInput}
-                                onChange={(e) => setTimeInput(e.target.value)}
-                                placeholder="Hours"
-                                className="w-24"
-                            />
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={handleTimeLog}
-                                className="bg-blue-100 text-blue-800 hover:bg-blue-200"
-                            >
-                                Log Time
-                            </Button>
-                        </div>
-                    )}
+                    {task.AssignedTo &&
+                        task.AssignedTo._id === user?._id &&
+                        task.isAccepted &&
+                        !task.IsCompleted && (
+                            <div className="flex items-center gap-2">
+                                {!isTracking ? (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={startTimeTracking}
+                                        className="bg-blue-100 text-blue-800 hover:bg-blue-200 flex items-center gap-1"
+                                    >
+                                        <Play className="h-4 w-4" />
+                                        Start Timer
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={stopTimeTracking}
+                                        className="bg-red-100 text-red-800 hover:bg-red-200 flex items-center gap-1"
+                                    >
+                                        <StopCircle className="h-4 w-4" />
+                                        Stop Timer
+                                    </Button>
+                                )}
+                            </div>
+                        )}
 
                     <div className="flex gap-2 ml-auto">
                         {/* Show Accept Task button for unassigned tasks or tasks that were rejected */}
@@ -275,7 +360,7 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                         )}
                     </div>
                 </div>
-                
+
                 {/* New row for Reject and Complete buttons */}
                 <div className="flex justify-end gap-2 mt-2">
                     {/* Show Reject Task button for accepted tasks assigned to current user */}
@@ -300,7 +385,7 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                                 onClick={handleTaskCompletion}
                                 className="border-green-200 hover:bg-green-50 text-green-800"
                             >
-                                Complete
+                                {isTracking ? "Done" : "Complete"}
                             </Button>
                         )}
                 </div>

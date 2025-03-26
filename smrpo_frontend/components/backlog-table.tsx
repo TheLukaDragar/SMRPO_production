@@ -246,9 +246,9 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                                         required
                                     >
                                         <option value="">Select priority</option>
-                                        <option value="High">High</option>
-                                        <option value="Medium">Medium</option>
-                                        <option value="Low">Low</option>
+                                        <option value="Wont Have">Wont Have</option>
+                                        <option value="Should Have">Should Have</option>
+                                        <option value="Must have">Must have</option>
                                     </select>
                                     {!newUserStory.priority && error && (
                                         <p className="mt-1 text-sm text-red-500">Priority is required</p>

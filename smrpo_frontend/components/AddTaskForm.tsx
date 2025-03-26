@@ -119,8 +119,8 @@ export function AddTaskForm({ userStoryId, team, isDeveloper, isScrumMaster, spr
         setError("");
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (e?: React.MouseEvent) => {
+        if (e) e.preventDefault();
 
         if (!validateTask()) {
             return;
@@ -142,7 +142,7 @@ export function AddTaskForm({ userStoryId, team, isDeveloper, isScrumMaster, spr
             };
 
             const result = await addTask(taskToAdd);
-            
+
             if (!result || !result.insertedId) {
                 throw new Error("Failed to add task - no ID returned");
             }
@@ -165,7 +165,8 @@ export function AddTaskForm({ userStoryId, team, isDeveloper, isScrumMaster, spr
     return (
         <Card>
             <CardContent className="p-4">
-                <form className="space-y-4">
+                {/* Changed from form to div to prevent nested form elements */}
+                <div className="space-y-4">
                     {error && (
                         <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
                             {error}
@@ -242,8 +243,8 @@ export function AddTaskForm({ userStoryId, team, isDeveloper, isScrumMaster, spr
                     >
                         {isSubmitting ? 'Adding...' : 'Add Task'}
                     </Button>
-                </form>
+                </div>
             </CardContent>
         </Card>
     );
-} 
+}
