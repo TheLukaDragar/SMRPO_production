@@ -345,95 +345,102 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                     </div>
                 )}
 
-                <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
-                    {/* Timer controls + manual logging */}
-                    {task.AssignedTo &&
-                        task.AssignedTo._id === user?._id &&
-                        task.isAccepted &&
-                        !task.IsCompleted && (
-                            <div className="flex items-center gap-3">
-                                {!isTracking ? (
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={startTimeTracking}
-                                        className="bg-blue-100 text-blue-800 hover:bg-blue-200 flex items-center gap-1"
-                                    >
-                                        <Play className="h-4 w-4" />
-                                        Start Timer
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={stopTimeTracking}
-                                        className="bg-red-100 text-red-800 hover:bg-red-200 flex items-center gap-1"
-                                    >
-                                        <StopCircle className="h-4 w-4" />
-                                        Stop Timer
-                                    </Button>
-                                )}
+{task.AssignedTo &&
+    task.AssignedTo._id === user?._id &&
+    task.isAccepted &&
+    !task.IsCompleted && (
+        <div>
+            {/* Timer controls */}
+            <div className="flex items-center gap-3">
+                {!isTracking ? (
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={startTimeTracking}
+                        className="bg-blue-100 text-blue-800 hover:bg-blue-200 flex items-center gap-1"
+                    >
+                        <Play className="h-4 w-4" />
+                        Start Timer
+                    </Button>
+                ) : (
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={stopTimeTracking}
+                        className="bg-red-100 text-red-800 hover:bg-red-200 flex items-center gap-1"
+                    >
+                        <StopCircle className="h-4 w-4" />
+                        Stop Timer
+                    </Button>
+                )}
+            </div>
+            
+            {/* Manual logging spinboxes */}
+            <div className="mt-2 flex items-center gap-3">
+                <div className="flex flex-col">
+                    <label className="text-xs text-gray-500">Hours Done</label>
+                    <Input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={manualDone}
+                        onChange={(e) => setManualDone(e.target.value)}
+                        className="w-16"
+                    />
+                </div>
+                <div className="flex flex-col">
+                    <label className="text-xs text-gray-500">Hours To Go</label>
+                    <Input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={manualToGo}
+                        onChange={(e) => setManualToGo(e.target.value)}
+                        className="w-16"
+                    />
+                </div>
+            </div>
 
-                                {/* Manual logging spinboxes + Log button */}
-                                <div className="flex flex-col">
-                                    <label className="text-xs text-gray-500">Hours Done</label>
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.5"
-                                        value={manualDone}
-                                        onChange={(e) => setManualDone(e.target.value)}
-                                        className="w-16"
-                                    />
-                                </div>
-                                <div className="flex flex-col">
-                                    <label className="text-xs text-gray-500">Hours To Go</label>
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.5"
-                                        value={manualToGo}
-                                        onChange={(e) => setManualToGo(e.target.value)}
-                                        className="w-16"
-                                    />
-                                </div>
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={handleManualTimeLog}
-                                    className="bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                >
-                                    Log
-                                </Button>
-                            </div>
-                        )}
+            {/* Log button in another line */}
+            <div className="mt-2">
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleManualTimeLog}
+                    className="bg-blue-100 text-blue-800 hover:bg-blue-200"
+                >
+                    Log
+                </Button>
+            </div>
+        </div>
+    )
+}
 
-                    {/* Right-side controls: Accept/TakeOver/Delete */}
-                    <div className="flex gap-2 ml-auto">
-                        {user && !task.isAccepted && !task.IsCompleted && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleTaskAcceptance}
-                                className="border-yellow-200 hover:bg-yellow-50 text-yellow-800"
-                            >
-                                {task.AssignedTo?._id === user?._id
-                                    ? "Accept Task"
-                                    : "Take Over Task"}
-                            </Button>
-                        )}
+                {/* Right-side controls: Accept/TakeOver/Delete */}
+                <div className="flex gap-2 ml-auto">
+                    {user && !task.isAccepted && !task.IsCompleted && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleTaskAcceptance}
+                            className="border-yellow-200 hover:bg-yellow-50 text-yellow-800"
+                        >
+                            {task.AssignedTo?._id === user?._id
+                                ? "Accept Task"
+                                : "Take Over Task"}
+                        </Button>
+                    )}
 
-                        {canDelete && (
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={handleDelete}
-                                className="bg-red-100 text-red-800 hover:bg-red-200 hover:text-red-900"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        )}
-                    </div>
+                    {canDelete && (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleDelete}
+                            className="bg-red-100 text-red-800 hover:bg-red-200 hover:text-red-900"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
 
                 {/* Reject and Complete buttons */}
