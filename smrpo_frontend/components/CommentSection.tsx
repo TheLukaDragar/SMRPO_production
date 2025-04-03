@@ -81,7 +81,9 @@ export default function CommentSection({
                         {/* If not showing all, display only the most recent comment */}
                         {!showAll && latestComment && (
                             <div className="border rounded p-3 bg-gray-50 text-sm shadow-sm">
-                                <div className="text-gray-800 mb-1">{latestComment.text}</div>
+                                <div className="text-gray-800 mb-1 whitespace-pre-line">
+                                    {latestComment.text}
+                                </div>
                                 <div className="text-xs text-gray-500">
                                     — {latestComment.user}, {new Date(latestComment.createdAt).toLocaleString()}
                                 </div>
@@ -90,7 +92,9 @@ export default function CommentSection({
                         {/* If showing all, display all comments */}
                         {showAll && comments.map((comment, index) => (
                             <div key={index} className="border rounded p-3 bg-gray-50 text-sm shadow-sm">
-                                <div className="text-gray-800 mb-1">{comment.text}</div>
+                                <div className="text-gray-800 mb-1 whitespace-pre-line">
+                                    {comment.text}
+                                </div>
                                 <div className="text-xs text-gray-500">
                                     — {comment.user}, {new Date(comment.createdAt).toLocaleString()}
                                 </div>
