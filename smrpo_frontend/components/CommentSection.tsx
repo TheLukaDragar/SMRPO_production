@@ -1,89 +1,113 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { updateStory } from "@/lib/actions/user-story-actions";
+import { UserStory, CommentEntry } from "@/lib/types/user-story-types";
+import { useUser } from "@/lib/hooks/useUser";
 
-interface Comment {
-    id: string;
-    user: string;
-    text: string;
-    createdAt: string;
-}
-
-export default function CommentSection({ storyId }: { storyId: string }) {
-    const [comments, setComments] = useState<Comment[]>([]);
+export default function CommentSection({
+    storyId,
+    storyData,
+}: {
+    storyId: string;
+    storyData: UserStory;
+}) {
     const [text, setText] = useState("");
+    // Comments are taken from storyData.comments or empty array if undefined
+    const [comments, setComments] = useState<CommentEntry[]>(storyData.comments || []);
+    const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+    const [showAll, setShowAll] = useState(false);
+    const { user } = useUser();
 
-    useEffect(() => {
-        fetch(`/api/comments?storyId=${storyId}`)
-            .then((res) => res.json())
-            .then((data) => {
-                if (Array.isArray(data)) {
-                    setComments(data);
-                } else {
-                    console.error("Failed to fetch comments:", data);
-                    setComments([]);
-                }
-            })
-            .catch((err) => {
-                console.error("Error fetching comments:", err);
-                setComments([]);
-            });
-    }, [storyId]);
+    const saveComment = async () => {
+        if (!text.trim() || !user?.userName) return;
 
-    const submitComment = async () => {
-        if (!text.trim()) return;
+        setStatus("saving");
 
-        const res = await fetch("/api/comments", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ storyId, text }),
-        });
+        const newComment: CommentEntry = {
+            text,
+            user: user.userName,
+            createdAt: new Date().toISOString(),
+        };
 
-        if (res.ok) {
-            const newComment = await res.json();
-            setComments((prev) => [...prev, newComment]);
+        // Append the new comment to the existing ones
+        const updated = {
+            ...storyData,
+            comments: [...comments, newComment],
+        };
+
+        try {
+            await updateStory(updated);
+            setComments(updated.comments);
             setText("");
+            setStatus("saved");
+        } catch (err) {
+            console.error("Error saving comment:", err);
+            setStatus("error");
         }
     };
+
+    // Helper: Display the most recent comment
+    const latestComment = comments.length > 0 ? comments[comments.length - 1] : null;
 
     return (
         <div className="mt-4 border-t pt-4">
             <h3 className="font-semibold text-gray-700 mb-2">Comments</h3>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-                {comments.map((comment) => (
-                    <div key={comment.id} className="bg-gray-100 rounded p-2 text-sm">
-                        <div className="text-gray-800">{comment.text}</div>
-                        <div className="text-gray-400 text-xs">{new Date(comment.createdAt).toLocaleString()}</div>
-                    </div>
-                ))}
-            </div>
+
             <Textarea
-                placeholder="Type your comment..."
+                placeholder="Write your comment..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="mt-3"
+                className="mb-2"
             />
-            <Button className="mt-2" onClick={submitComment}>
-                Submit
+            <Button onClick={saveComment} disabled={status === "saving"}>
+                {status === "saving" ? "Saving..." : "Submit Comment"}
             </Button>
-            <div className="max-h-52 overflow-y-auto space-y-3 mb-4 border border-gray-200 rounded p-3 bg-white shadow-inner">
+
+            {status === "saved" && (
+                <p className="text-sm text-green-600 mt-2">Comment submitted.</p>
+            )}
+            {status === "error" && (
+                <p className="text-sm text-red-600 mt-2">Failed to submit comment.</p>
+            )}
+
+            <div className="mt-4 space-y-4">
                 {comments.length === 0 ? (
                     <p className="text-sm text-gray-500">No comments yet.</p>
                 ) : (
-                    comments.map((comment) => (
-                        <div key={comment.id} className="border-b pb-2">
-                            <div className="text-sm text-gray-800">{comment.text}</div>
-                            <div className="text-xs text-gray-400 mt-1">
-                                {new Date(comment.createdAt).toLocaleString()}
+                    <>
+                        {/* If not showing all, display only the most recent comment */}
+                        {!showAll && latestComment && (
+                            <div className="border rounded p-3 bg-gray-50 text-sm shadow-sm">
+                                <div className="text-gray-800 mb-1">{latestComment.text}</div>
+                                <div className="text-xs text-gray-500">
+                                    — {latestComment.user}, {new Date(latestComment.createdAt).toLocaleString()}
+                                </div>
                             </div>
-                        </div>
-                    ))
+                        )}
+                        {/* If showing all, display all comments */}
+                        {showAll && comments.map((comment, index) => (
+                            <div key={index} className="border rounded p-3 bg-gray-50 text-sm shadow-sm">
+                                <div className="text-gray-800 mb-1">{comment.text}</div>
+                                <div className="text-xs text-gray-500">
+                                    — {comment.user}, {new Date(comment.createdAt).toLocaleString()}
+                                </div>
+                            </div>
+                        ))}
+                        {/* Show the toggle button only if there is more than one comment */}
+                        {comments.length > 1 && (
+                            <button
+                                onClick={() => setShowAll(!showAll)}
+                                className="text-blue-600 text-sm"
+                            >
+                                {showAll ? "Hide older comments" : "View more comments"}
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
         </div>
-
-
     );
 }

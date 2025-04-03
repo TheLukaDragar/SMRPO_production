@@ -18,6 +18,19 @@ import {
 import TextAreaTests from "@/components/TextAreaTests";
 import CommentSection from "@/components/CommentSection";
 
+export interface UserStory {
+    id: string;
+    title: string;
+    description: string;
+    priority: string;
+    storyPoints?: number;
+    SprintPosition: string;
+    createdAt: string;
+    owner?: {
+        userName: string;
+    };
+    comments?: CommentEntry[];
+}
 
 interface UserStoryCardProps {
     ID: string;
@@ -26,6 +39,7 @@ interface UserStoryCardProps {
     storyData: UserStory;
     userRole: string;
     team: User[];
+    comment: string;
 }
 
 const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, storyData, userRole, team }) => {
@@ -170,7 +184,13 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                             </p>
                             <p><strong>Status:</strong> {storyData.SprintPosition}</p>
                             <p className="col-span-2"><strong>Created:</strong> {new Date(storyData.createdAt).toLocaleDateString()}</p>
-                            {/* <CommentSection storyId={draggableId} /> */}
+                            {/*<CommentSection storyId={draggableId} />*/}
+                            <CommentSection
+                                storyId={draggableId}
+                                initialComment={storyData.comment || ""}
+                                storyData={storyData}
+                            />
+
 
                         </div>
 

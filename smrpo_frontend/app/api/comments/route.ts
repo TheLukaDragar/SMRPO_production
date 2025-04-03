@@ -31,7 +31,16 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
 
-        const body = await req.json();
+        //const body = await req.json();
+        let body;
+        try {
+            console.log("✅ Comment saved to DB:");
+            body = await req.json();
+        } catch (err) {
+            console.error("Invalid JSON body:", err);
+            return NextResponse.json({ message: "Invalid JSON" }, { status: 400 });
+        }
+
         const { storyId, text } = body;
 
         if (!storyId || !text.trim()) {
