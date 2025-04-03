@@ -1,12 +1,12 @@
 "use client";
 
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import { Draggable } from "@hello-pangea/dnd";
-import {UserStory} from "@/lib/types/user-story-types";
-import {useUser} from "@/lib/hooks/useUser";
-import {updateStory, getTasks} from "@/lib/actions/user-story-actions";
-import {tasks} from "@/lib/types/tasks";
-import {User} from "@/lib/types/user-types";
+import { UserStory } from "@/lib/types/user-story-types";
+import { useUser } from "@/lib/hooks/useUser";
+import { updateStory, getTasks } from "@/lib/actions/user-story-actions";
+import { tasks } from "@/lib/types/tasks";
+import { User } from "@/lib/types/user-types";
 import { TaskCard } from "@/components/TaskCard";
 import { AddTaskForm } from "@/components/AddTaskForm";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -16,6 +16,8 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import TextAreaTests from "@/components/TextAreaTests";
+import CommentSection from "@/components/CommentSection";
+
 
 interface UserStoryCardProps {
     ID: string;
@@ -26,14 +28,14 @@ interface UserStoryCardProps {
     team: User[];
 }
 
-const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, storyData, userRole, team}) => {
+const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, storyData, userRole, team }) => {
     const { user } = useUser();
     const [isScrumMaster, setIsScrumMaster] = useState(false);
     const [isDeveloper, setIsDeveloper] = useState(false);
     const [isValid, setIsValid] = useState(true);
     const [validationMessage, setValidationMessage] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editedStory, setEditedStory] = useState<UserStory>({...storyData});
+    const [editedStory, setEditedStory] = useState<UserStory>({ ...storyData });
     const [storyTasks, setStoryTasks] = useState<tasks[]>([]);
     const [isTasksOpen, setIsTasksOpen] = useState(true);
 
@@ -45,7 +47,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
     }, [user, storyData, ID, draggableId, userRole]);
 
     useEffect(() => {
-        setEditedStory({...storyData});
+        setEditedStory({ ...storyData });
     }, [storyData]);
 
     const validateStory = () => {
@@ -71,7 +73,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
-        setEditedStory({...storyData});
+        setEditedStory({ ...storyData });
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -143,20 +145,19 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                             <div className="flex items-center space-x-2">
                                 {!isValid && (
                                     <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
-                                    {validationMessage}
-                                </span>
+                                        {validationMessage}
+                                    </span>
                                 )}
                                 <span
-                                    className={`text-sm px-2 py-1 rounded-full ${
-                                        storyData.priority === 'Must have'
-                                            ? 'bg-red-500 text-white'
-                                            : storyData.priority === 'Should have'
-                                                ? 'bg-yellow-500 text-white'
-                                                : 'bg-green-500 text-white'
-                                    }`}
+                                    className={`text-sm px-2 py-1 rounded-full ${storyData.priority === 'Must have'
+                                        ? 'bg-red-500 text-white'
+                                        : storyData.priority === 'Should have'
+                                            ? 'bg-yellow-500 text-white'
+                                            : 'bg-green-500 text-white'
+                                        }`}
                                 >
-                                {storyData.priority}
-                            </span>
+                                    {storyData.priority}
+                                </span>
                             </div>
                         </div>
 
@@ -169,6 +170,8 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                             </p>
                             <p><strong>Status:</strong> {storyData.SprintPosition}</p>
                             <p className="col-span-2"><strong>Created:</strong> {new Date(storyData.createdAt).toLocaleDateString()}</p>
+                            {/* <CommentSection storyId={draggableId} /> */}
+
                         </div>
 
                         {storyTasks.length > 0 && (
@@ -240,7 +243,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Description</label>
-                                <TextAreaTests input={editedStory}/>
+                                <TextAreaTests input={editedStory} />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -284,6 +287,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                         <option value="Sprint">Sprint</option>
                                         <option value="In Progress">In Progress</option>
                                         <option value="Done">Done</option>
+                                        <option value="Rejected">Rejected</option>
                                     </select>
                                 </div>
                             </div>

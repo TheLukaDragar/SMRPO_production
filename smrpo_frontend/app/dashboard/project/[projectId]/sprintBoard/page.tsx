@@ -16,7 +16,7 @@ import { useProject } from "@/lib/contexts/project-context";
 import { getProjectMembers } from "@/lib/actions/project-actions";
 import { getUsersByIds } from "@/lib/actions/user-actions";
 import AddSprintModal from '@/components/AddSprintModal';
-import {useUser} from "@/lib/hooks/useUser";
+import { useUser } from "@/lib/hooks/useUser";
 import BacklogTable from "@/components/backlog-table";
 import { use } from 'react';
 
@@ -54,7 +54,7 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
             console.log('Users JSON:', JSON.stringify(users));
 
             if (user && user._id) {
-                console.log("all u;" , users)
+                console.log("all u;", users)
                 console.log("curr u;", user)
 
                 const currentUserInProject = users.filter((projectUser: any) => projectUser.userId == user._id);
@@ -187,7 +187,7 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
                 projectId: projectId,
                 sprintName: name || `Sprint ${sprintNumber}`,
                 isActive: true,
-                sprintParts: ['Sprint Backlog', 'Development', 'Testing', 'Acceptance', 'Done'],
+                sprintParts: ['Sprint Backlog', 'Development', 'Testing', 'Acceptance', 'Done', 'Rejected'],
                 startDate: startDate,
                 endDate: endDate,
                 velocity: velocity
@@ -240,6 +240,16 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
                                     setItems={setStories}
                                     userRole={userRole || undefined}
                                 />
+                                <BacklogTable
+                                    droppableId={`${projectId}-Rejected`}
+                                    title="Rejected"
+                                    items={stories.filter(story => story.SprintPosition === "Rejected" && story.sprintID === projectId)}
+                                    projectUsers={projectUsers}
+                                    setItems={setStories}
+                                    userRole={userRole || undefined}
+                                />
+
+
                             </div>
 
                             {/* Sprint Boards Section */}
