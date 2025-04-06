@@ -48,7 +48,10 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
             title: "Overview",
             url: "/dashboard",
           },
-
+          {
+            title: "Burndown",
+            url: projectId ? `/dashboard/project/${projectId}/burndown` : "/dashboard/burndown",
+          },
         ],
       },
       // {
