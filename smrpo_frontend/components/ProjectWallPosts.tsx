@@ -73,13 +73,18 @@ const ProjectWallPosts: React.FC<ProjectWallPostsProps> = ({project_id, posts, s
 
                 <div className="border-t p-4 bg-white fixed bottom-0 left-0 right-0 z-10 shadow-md">
                     <div className="flex space-x-2 max-w-4xl mx-auto">
-                        <input
-                            type="text"
+                        <textarea
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={handleKeyPress}
+                            onKeyDown={(e) => {
+                                {/*if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handlePost();
+                                }*/
+                                }
+                            }}
                             placeholder="Input new post..."
-                            className="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="flex-1 border rounded-lg px-4 py-2 min-h-[80px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <button
                             onClick={handlePost}
