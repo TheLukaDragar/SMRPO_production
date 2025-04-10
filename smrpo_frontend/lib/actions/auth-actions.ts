@@ -8,8 +8,9 @@ import { AppError, createErrorResponse, ErrorResponse } from '../utils/error-han
 import { redirect } from 'next/navigation';
 import { ZodError } from 'zod';
 import { UserRole } from '../types/user-types';
+import { ObjectId } from 'mongodb';
 
-export async function login(formData: FormData): Promise<{ success: true } | ErrorResponse> {
+export async function login(formData: FormData): Promise<{ success: true; requireTwoFactor?: boolean; userId?: string } | ErrorResponse> {
     try {
         const loginData = {
             emailOrUsername: formData.get('emailOrUsername') as string,
@@ -32,7 +33,6 @@ export async function login(formData: FormData): Promise<{ success: true } | Err
         }
 
         // Compare password
-        console.log(validatedData.password, user.password);
         const isPasswordValid = await compare(validatedData.password, user.password);
         if (!isPasswordValid) {
             return createErrorResponse(new AppError('Invalid credentials', 401, 'AuthError'));
@@ -48,6 +48,15 @@ export async function login(formData: FormData): Promise<{ success: true } | Err
             sameSite: 'lax',
             maxAge: 7 * 24 * 60 * 60, // 7 days
         });
+
+        // Check if 2FA is enabled
+        if (user.twoFactorEnabled) {
+            return { 
+                success: true, 
+                requireTwoFactor: true,
+                userId: user._id.toString()
+            };
+        }
 
         return { success: true };
     } catch (error) {
@@ -147,15 +156,16 @@ export async function logout() {
     }
 }
 
-async function createSession(userId: string): Promise<string> {
+async function createSession(userId: string | ObjectId): Promise<string> {
     const { db } = await connectToDatabase();
     const token = generateSessionToken();
 
     await db().collection('sessions').insertOne({
         token,
-        userId,
+        userId: typeof userId === 'string' ? new ObjectId(userId) : userId,
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        twoFactorVerified: false, // Add this field for 2FA status
     });
 
     return token;

@@ -47,7 +47,16 @@ export function LoginForm({
         const errorResponse = result as ErrorResponse;
         setError(errorResponse.error);
       } else {
-        // Redirect to the original destination or dashboard
+        // Check if 2FA is required
+        if (result.requireTwoFactor && result.userId) {
+          // Redirect to 2FA verification page
+          const from = searchParams.get('from') || '/dashboard';
+          const url = `/verify-2fa?from=${encodeURIComponent(from)}&userId=${result.userId}`;
+          router.push(url);
+          return;
+        }
+        
+        // No 2FA needed, redirect to the original destination or dashboard
         const from = searchParams.get('from') || '/dashboard';
         router.push(from);
         router.refresh();

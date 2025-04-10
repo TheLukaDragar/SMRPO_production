@@ -13,6 +13,10 @@ export interface User {
     email: string;
     role: UserRole;
     createdAt: Date;
+    currentPassword?: string; // Optional for password verification
+    twoFactorEnabled?: boolean; // Whether 2FA is enabled
+    twoFactorSecret?: string; // Secret for 2FA verification
+    twoFactorRecoveryCode?: string; // Recovery code for 2FA
 }
 
 export interface UserNoId {
@@ -23,4 +27,8 @@ export interface UserNoId {
     email: string;
     role: UserRole;
     createdAt: Date;
+    currentPassword?: string; // Optional for password verification
+    twoFactorEnabled?: boolean; // Whether 2FA is enabled
+    twoFactorSecret?: string; // Secret for 2FA verification
+    twoFactorRecoveryCode?: string; // Recovery code for 2FA
 }

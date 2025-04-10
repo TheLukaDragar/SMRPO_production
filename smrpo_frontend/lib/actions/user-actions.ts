@@ -2,10 +2,10 @@
 
 import {connectToDatabase} from "@/lib/db/connection";
 import {revalidatePath} from 'next/cache';
-import {genSalt, hash} from "bcrypt-ts";
+import {genSalt, hash, compare} from "bcrypt-ts";
 import {User, UserNoId, UserRole} from "../types/user-types";
 import {ObjectId} from "mongodb";
-import { validateUser, userSchema } from '../validations/auth-validations';
+import { validateUser, userSchema, validatePartialUser, partialUserSchema } from '../validations/auth-validations';
 import { AppError, createErrorResponse } from '@/lib/utils/error-handling';
 import { ZodError } from 'zod';
 import type { ErrorResponse } from '@/lib/utils/error-handling';
@@ -121,7 +121,7 @@ export async function getUsersByIds(ids: string[] | string) {
 export async function updateUser(id: string, userData: Partial<User>): Promise<{ success: true } | ErrorResponse> {
     try {
         const { db } = await connectToDatabase();
-        const { _id, ...updateData } = userData;
+        const { _id, currentPassword, ...updateData } = userData;
 
         // Get current user data
         const currentUser = await getUserById(id);
@@ -129,10 +129,22 @@ export async function updateUser(id: string, userData: Partial<User>): Promise<{
             throw new AppError("User not found", 404, "NotFoundError");
         }
 
+        // If updating password, verify current password
+        if (updateData.password && currentPassword) {
+            // Verify the current password matches
+            const isPasswordValid = await compare(currentPassword, currentUser.password);
+            if (!isPasswordValid) {
+                throw new AppError("Current password is incorrect", 401, "AuthError");
+            }
+        } else if (updateData.password && !currentPassword) {
+            throw new AppError("Current password is required to change password", 400, "ValidationError");
+        }
+
         // Check for duplicate username (case-insensitive)
         if (updateData.userName && updateData.userName.toLowerCase() !== currentUser.userName.toLowerCase()) {
             const duplicateUser = await db().collection('users').findOne({ 
-                userName: { $regex: new RegExp(`^${updateData.userName}$`, 'i') } 
+                userName: { $regex: new RegExp(`^${updateData.userName}$`, 'i') },
+                _id: { $ne: new ObjectId(id) } // exclude current user
             });
             if (duplicateUser) {
                 throw new AppError("Username already exists", 400, "ValidationError");
@@ -142,7 +154,8 @@ export async function updateUser(id: string, userData: Partial<User>): Promise<{
         // Check for duplicate email (case-insensitive)
         if (updateData.email && updateData.email.toLowerCase() !== currentUser.email.toLowerCase()) {
             const duplicateEmail = await db().collection('users').findOne({ 
-                email: { $regex: new RegExp(`^${updateData.email}$`, 'i') }
+                email: { $regex: new RegExp(`^${updateData.email}$`, 'i') },
+                _id: { $ne: new ObjectId(id) } // exclude current user
             });
             if (duplicateEmail) {
                 throw new AppError("Email already exists", 400, "ValidationError");
@@ -157,9 +170,9 @@ export async function updateUser(id: string, userData: Partial<User>): Promise<{
             createdAt: currentUser.createdAt instanceof Date ? currentUser.createdAt : new Date(currentUser.createdAt)
         };
 
-        // Validate the updated data using Zod schema
+        // Validate the updated data using the partial schema
         try {
-            userSchema.parse(mergedData);
+            validatePartialUser(mergedData);
         } catch (error) {
             if (error instanceof ZodError) {
                 const validationErrors = error.errors.map(err => ({
@@ -182,16 +195,27 @@ export async function updateUser(id: string, userData: Partial<User>): Promise<{
             updateData.password = await hash(updateData.password, salt);
         }
 
+        // Only include fields that have been provided
+        const cleanUpdateData = Object.entries(updateData)
+            .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+            .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
+
+        if (Object.keys(cleanUpdateData).length === 0) {
+            return { success: true }; // No changes to make
+        }
+
         const result = await db().collection('users').updateOne(
             { _id: new ObjectId(id) },
-            { $set: updateData }
+            { $set: cleanUpdateData }
         );
 
         if (result.matchedCount === 0) {
             throw new AppError("User not found", 404, "NotFoundError");
         }
 
+        // Revalidate appropriate paths
         revalidatePath('/dashboard/admin/user_managment');
+        revalidatePath('/profile');
         return { success: true };
     } catch (error) {
         return createErrorResponse(error);
@@ -218,7 +242,8 @@ export async function handleUpdateUser(formData: FormData, userId: string): Prom
         const lastName = formData.get("lastName") as string;
         const email = formData.get("email") as string;
         const role = formData.get("role") as UserRole;
-        const newPassword = formData.get("password") as string;
+        const newPassword = formData.get("newPassword") as string;
+        const currentPassword = formData.get("currentPassword") as string;
 
         // Only include fields that have changed
         if (newUserName && newUserName.toLowerCase() !== currentUser.userName.toLowerCase()) {
@@ -235,6 +260,17 @@ export async function handleUpdateUser(formData: FormData, userId: string): Prom
         }
         if (role && role !== currentUser.role) {
             updateData.role = role;
+        }
+
+        // Handle password update
+        if (newPassword) {
+            // If updating password, verify current password
+            if (!currentPassword) {
+                throw new AppError("Current password is required to change password", 400, "ValidationError");
+            }
+            
+            updateData.password = newPassword;
+            updateData.currentPassword = currentPassword;
         }
 
         // Create merged object for validation
@@ -262,34 +298,6 @@ export async function handleUpdateUser(formData: FormData, userId: string): Prom
                 );
             }
             throw error;
-        }
-
-        // Handle password update separately
-        if (newPassword) {
-            // Validate with the new unhashed password
-            try {
-                userSchema.parse({
-                    ...validationData,
-                    password: newPassword
-                });
-                // Only hash password after validation
-                const salt = await genSalt(10);
-                updateData.password = await hash(newPassword, salt);
-            } catch (error) {
-                if (error instanceof ZodError) {
-                    const validationErrors = error.errors.map(err => ({
-                        field: err.path[0],
-                        message: err.message
-                    }));
-                    throw new AppError(
-                        validationErrors[0].message,
-                        400,
-                        'ValidationError',
-                        validationErrors
-                    );
-                }
-                throw error;
-            }
         }
 
         return await updateUser(userId, updateData);

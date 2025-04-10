@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ErrorResponse } from "@/lib/utils/error-handling"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { UserRole } from '@/lib/types/user-types';
+import { SimplePasswordStrengthMeter } from "@/components/password-strength-meter"
 
 export function RegisterForm({
   className,
@@ -20,6 +21,7 @@ export function RegisterForm({
   const router = useRouter();
   const [error, setError] = useState<ErrorResponse['error'] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [password, setPassword] = useState('');
 
   const getFieldError = (fieldName: string) => {
     if (!error?.validationErrors) return null;
@@ -135,10 +137,16 @@ export function RegisterForm({
             placeholder="••••••••" 
             required 
             disabled={isLoading}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
+          <SimplePasswordStrengthMeter password={password} />
           {getFieldError('password') && (
             <p className="text-sm text-destructive">{getFieldError('password')}</p>
           )}
+          <p className="text-xs text-muted-foreground">
+            Password must be at least 12 characters long and should include uppercase letters, lowercase letters, numbers, and special characters.
+          </p>
         </div>
         <div className="grid gap-3">
           <Label htmlFor="role">Role</Label>

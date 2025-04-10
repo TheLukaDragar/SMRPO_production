@@ -4,7 +4,8 @@ import { useUser } from '@/lib/hooks/useUser'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
-import {AppSidebar} from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/app-sidebar"
+import { SessionCheck } from "@/components/session-check"
 
 interface ProtectedLayoutProps {
     children: React.ReactNode
@@ -26,9 +27,11 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
     }
 
     return (
-        <SidebarProvider>
-            <AppSidebar user={user} />
-            {children}
-        </SidebarProvider>
+        <SessionCheck>
+            <SidebarProvider>
+                <AppSidebar user={user} />
+                {children}
+            </SidebarProvider>
+        </SessionCheck>
     )
 }
