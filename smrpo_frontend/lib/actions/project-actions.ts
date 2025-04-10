@@ -73,7 +73,7 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
         // Check for duplicate project name (case-insensitive)
         const { db } = await connectToDatabase();
         const existingProject = await db().collection('projects').findOne({ 
-            name: { $regex: new RegExp(`^${projectName}$`, 'i') } 
+            name: { $regex: new RegExp(`^${projectName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } 
         });
         if (existingProject) {
             return createErrorResponse(new AppError('A project with this name already exists', 400, 'ValidationError'));
@@ -202,10 +202,25 @@ export async function updateProject(id: string, projectData: Partial<Project>): 
         if (!id) throw new AppError("Project ID is required", 400);
 
         const validatedData = validateUpdateProject(projectData);
+        
+        const { db } = await connectToDatabase();
+        
+        // If project name is being updated, check for duplicates (case-insensitive)
+        if (projectData.name) {
+            // Check for duplicate project name (case-insensitive)
+            // Exclude the current project from the check (to allow keeping the same name with different case)
+            const existingProject = await db().collection('projects').findOne({ 
+                _id: { $ne: new ObjectId(id) },
+                name: { $regex: new RegExp(`^${projectData.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } 
+            });
+            
+            if (existingProject) {
+                throw new AppError('A project with this name already exists', 400, 'ValidationError');
+            }
+        }
 
         console.log("Before update, received projectData:", projectData);
 
-        const { db } = await connectToDatabase();
         const result = await db().collection("projects").updateOne(
             { _id: new ObjectId(id) },
             {
@@ -310,7 +325,7 @@ export async function updateProjectMemberRole(projectId: string, userId: string,
         const { db } = await connectToDatabase();
         const result = await db().collection('projects').updateOne(
             {
-                _id: projectId,
+                _id: new ObjectId(projectId),
                 'members.userId': userId
             },
             {

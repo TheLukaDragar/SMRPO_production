@@ -96,37 +96,19 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
       //     },
       //   ],
       // },
-      {
-        title: "User Settings",
-        url: "/",
-        icon: Settings2,
-        items: [
-          {
-            title: "Team Members",
-            url: "/profile",
-          },
-        ]
-      },
+      
 
 
       {
         title: "Project Settings",
-        url: "/dashboard/settings",
+        url: projectId ? `/dashboard/project/${projectId}/settings` : "/dashboard/settings/project",
         icon: Settings2,
+        isActive: true,
         items: [
-          // {
-          //   title: "Project Settings",
-          //   url: projectId ? `/dashboard/project/${projectId}/settings` : "/dashboard/settings/project",
-          // },
           {
-            title: "Team Members",
-            url: projectId ? `/dashboard/project/${projectId}/settings/team` : "/settings/team",
-          },
-          // {
-          //   title: "Permissions",
-          //   url: projectId ? `/dashboard/project/${projectId}/settings/permissions` : "/dashboard/settings/permissions",
-          // },
-
+            title: "Settings",
+            url: projectId ? `/dashboard/project/${projectId}/settings` : "/dashboard/settings/project",
+          }
         ],
       },
       // {
@@ -175,6 +157,7 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
       title: "Admin",
       url: "/dashboard/admin",
       icon: ShieldUser,
+      isActive: true,
       items: [
         {
           title: "User Management",
