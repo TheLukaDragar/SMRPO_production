@@ -5,6 +5,7 @@ import {UserStoryNoId, UserStory} from "@/lib/types/user-story-types";
 import {sprint, sprintNoId} from "@/lib/types/sprint-types";
 import {ObjectId} from "mongodb";
 import {tasks, tasks_noId} from "@/lib/types/tasks";
+import {projectPostsNoId} from "@/lib/types/projectPosts-types";
 
 
 // Get all user stories
@@ -132,5 +133,50 @@ export async function deleteTask(taskId: string) {
     return {
         acknowledged: result.acknowledged,
         deletedCount: result.deletedCount,
+    };
+}
+
+
+///project posts actions
+
+
+// Get all posts
+export async function getPosts() {
+    const { db } = await connectToDatabase();
+    const posts = await db().collection('projectPosts').find({}).toArray();
+    return JSON.parse(JSON.stringify(posts));
+}
+
+//post by id
+export async function getPostsById(StringId: string) {
+    const { db } = await connectToDatabase();
+
+    try {
+        const objectId = new ObjectId(StringId);
+        const posts = await db().collection('projectPosts').find({"projectId": objectId}).toArray();
+
+        if (posts.length === 0) {
+            const stringPosts = await db().collection('projectPosts').find({"projectId": StringId}).toArray();
+            return JSON.parse(JSON.stringify(stringPosts));
+        }
+
+        return JSON.parse(JSON.stringify(posts));
+    } catch (error) {
+        console.error("Error in getPostsById:", error);
+
+        const stringPosts = await db().collection('projectPosts').find({"projectId": StringId}).toArray();
+        return JSON.parse(JSON.stringify(stringPosts));
+    }
+}
+
+//post by id
+export async function createPost(data: projectPostsNoId) {
+    const { db } = await connectToDatabase();
+
+    const result = await db().collection('projectPosts').insertOne(data);
+
+    return {
+        acknowledged: result.acknowledged,
+        insertedId: result.insertedId.toString(),
     };
 }
