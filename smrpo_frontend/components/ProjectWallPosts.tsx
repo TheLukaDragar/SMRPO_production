@@ -1,11 +1,11 @@
 "use client"
 
-import React, {useEffect, useRef, useState} from "react";
-import {useUser} from "@/lib/hooks/useUser";
+import React, { useEffect, useRef, useState } from "react";
+import { useUser } from "@/lib/hooks/useUser";
 import ProjectWallPost from "@/components/ProjectWallPost";
-import {createPost} from "@/lib/actions/user-story-actions";
-import {projectPosts, projectPostsNoId} from "@/lib/types/projectPosts-types";
-import {UserStory} from "@/lib/types/user-story-types";
+import { createPost } from "@/lib/actions/user-story-actions";
+import { projectPosts, projectPostsNoId } from "@/lib/types/projectPosts-types";
+import PostCommentSection from "./PostCommentSection";
 
 interface ProjectWallPostsProps {
     project_id: string;
@@ -13,7 +13,7 @@ interface ProjectWallPostsProps {
     setPosts: React.Dispatch<React.SetStateAction<projectPosts[]>>;
 }
 
-const ProjectWallPosts: React.FC<ProjectWallPostsProps> = ({project_id, posts, setPosts}) => {
+const ProjectWallPosts: React.FC<ProjectWallPostsProps> = ({ project_id, posts, setPosts }) => {
     const [isAdmin, setIsAdmin] = useState(false);
     const [input, setInput] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -37,11 +37,11 @@ const ProjectWallPosts: React.FC<ProjectWallPostsProps> = ({project_id, posts, s
 
         const updatedUserStoryId = {
             _id: newPostId.insertedId,
-            ...newPost
+            ...newPost,
+            comments: []
         };
 
         setPosts([...posts, updatedUserStoryId]);
-
         setInput('');
     }
 
@@ -56,14 +56,23 @@ const ProjectWallPosts: React.FC<ProjectWallPostsProps> = ({project_id, posts, s
             <div className="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                 <div className="mb-16">
                     {posts && posts.length > 0 ? (
-                        posts.map((post) => (
-                            <ProjectWallPost
-                                key={post._id}
-                                author={post.author}
-                                lastChangeDate={post.lastChangeDate}
-                                text={post.text}
-                                postId={post._id}
-                            />
+                        posts.map((post, index) => (
+                            <div key={post._id} className="mb-10">
+                                <ProjectWallPost
+                                    author={post.author}
+                                    lastChangeDate={post.lastChangeDate}
+                                    text={post.text}
+                                    postId={post._id}
+                                />
+                                <PostCommentSection
+                                    post={post}
+                                    onUpdateComments={(newComments) => {
+                                        const updatedPosts = [...posts];
+                                        updatedPosts[index] = { ...updatedPosts[index], comments: newComments };
+                                        setPosts(updatedPosts);
+                                    }}
+                                />
+                            </div>
                         ))
                     ) : (
                         <p className="text-gray-500 text-center py-4">No posts yet. Be the first to post!</p>
@@ -77,11 +86,10 @@ const ProjectWallPosts: React.FC<ProjectWallPostsProps> = ({project_id, posts, s
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => {
-                                {/*if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handlePost();
-                                }*/
-                                }
+                                // if (e.key === 'Enter' && !e.shiftKey) {
+                                //     e.preventDefault();
+                                //     handlePost();
+                                // }
                             }}
                             placeholder="Input new post..."
                             className="flex-1 border rounded-lg px-4 py-2 min-h-[80px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
