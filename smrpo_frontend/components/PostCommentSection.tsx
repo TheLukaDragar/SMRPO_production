@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { CommentEntry, projectPosts } from "@/lib/types/projectPosts-types";
 import { useUser } from "@/lib/hooks/useUser";
+import { addCommentToPost } from "@/lib/actions/user-story-actions";
 
 export default function PostCommentSection({
     post,
@@ -33,6 +34,7 @@ export default function PostCommentSection({
         };
 
         try {
+            await addCommentToPost(post._id, newComment);
             const updatedComments = [...comments, newComment];
             onUpdateComments(updatedComments); // Send update to parent
             setText("");
