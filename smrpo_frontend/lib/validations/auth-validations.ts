@@ -1,10 +1,18 @@
 import { z } from 'zod';
+import { commonPasswords } from '../data/common-passwords';
 
 export const loginSchema = z.object({
     emailOrUsername: z.string().min(1, 'Email or username is required'),
     password: z.string()
         .min(12, 'Password must be at least 12 characters')
         .max(128, 'Password cannot exceed 128 characters')
+        // Check if password contains any common password
+        .refine(
+            (val) => !commonPasswords.some(commonPwd => 
+                val.toLowerCase().includes(commonPwd.toLowerCase())
+            ),
+            { message: 'Password contains a common word or pattern that makes it vulnerable to attacks. Please choose a stronger password.' }
+        )
         // Custom validation to ensure spaces are preserved exactly as entered
         .refine(
             (val) => {
@@ -33,6 +41,13 @@ export const userSchema = z.object({
     password: z.string()
         .min(12, 'Password must be at least 12 characters')
         .max(128, 'Password cannot exceed 128 characters')
+        // Check if password contains any common password
+        .refine(
+            (val) => !commonPasswords.some(commonPwd => 
+                val.toLowerCase().includes(commonPwd.toLowerCase())
+            ),
+            { message: 'Password contains a common word or pattern that makes it vulnerable to attacks. Please choose a stronger password.' }
+        )
         // Custom validation to ensure spaces are preserved exactly as entered
         .refine(
             (val) => {
