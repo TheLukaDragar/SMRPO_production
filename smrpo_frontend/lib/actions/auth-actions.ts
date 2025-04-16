@@ -28,6 +28,14 @@ export async function login(formData: FormData): Promise<{ success: true; requir
             ]
         });
 
+        // Update lastAttemptedLogin regardless of whether credentials are valid
+        if (user) {
+            await db().collection('users').updateOne(
+                { _id: user._id },
+                { $set: { lastAttemptedLogin: new Date() } }
+            );
+        }
+
         if (!user) {
             return createErrorResponse(new AppError('Invalid credentials', 401, 'AuthError'));
         }

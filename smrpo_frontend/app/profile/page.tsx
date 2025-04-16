@@ -30,6 +30,7 @@ export default function ProfilePage() {
     email: user?.email || "",
     currentPassword: "",
     newPassword: "",
+    confirmPassword: "",
   })
 
   // State for tracking which fields are being edited
@@ -44,6 +45,7 @@ export default function ProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [revealLastChar, setRevealLastChar] = useState(true)
 
   // 2FA states
@@ -180,6 +182,16 @@ export default function ProfilePage() {
         setIsSubmitting(false)
         return
       }
+
+      if (userData.newPassword !== userData.confirmPassword) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "New password and confirmation do not match",
+        })
+        setIsSubmitting(false)
+        return
+      }
       
       const updateData: Partial<User> = {
         password: userData.newPassword,
@@ -205,6 +217,7 @@ export default function ProfilePage() {
           ...userData,
           currentPassword: "",
           newPassword: "",
+          confirmPassword: "",
         })
         
         // Exit edit mode
@@ -392,6 +405,7 @@ export default function ProfilePage() {
           ...userData,
           currentPassword: "",
           newPassword: "",
+          confirmPassword: "",
         })
         
         // Refresh user data
@@ -527,6 +541,14 @@ export default function ProfilePage() {
                     {user.twoFactorEnabled ? "2FA Enabled" : "2FA Not Enabled"}
                   </span>
                 </div>
+                {user.lastAttemptedLogin && (
+                  <div className="flex items-center gap-2">
+                    <RefreshCw size={16} className="text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Last login attempt: {new Date(user.lastAttemptedLogin).toLocaleString()}
+                    </span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -660,6 +682,31 @@ export default function ProfilePage() {
                         <p className="text-xs text-muted-foreground mt-1">
                           Your password: {getMaskedPassword(userData.newPassword, false)}
                         </p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={userData.confirmPassword}
+                          onChange={handleChange}
+                          placeholder="Enter your new password again"
+                          className="pr-10"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                        >
+                          {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                      {userData.newPassword && userData.confirmPassword && userData.newPassword !== userData.confirmPassword && (
+                        <p className="text-sm text-destructive">Passwords do not match</p>
                       )}
                     </div>
                     

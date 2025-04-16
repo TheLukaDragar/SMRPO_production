@@ -13,6 +13,7 @@ export interface User {
     email: string;
     role: UserRole;
     createdAt: Date;
+    lastAttemptedLogin?: Date; // Track last login attempt
     currentPassword?: string; // Optional for password verification
     twoFactorEnabled?: boolean; // Whether 2FA is enabled
     twoFactorSecret?: string; // Secret for 2FA verification
@@ -27,6 +28,7 @@ export interface UserNoId {
     email: string;
     role: UserRole;
     createdAt: Date;
+    lastAttemptedLogin?: Date; // Track last login attempt
     currentPassword?: string; // Optional for password verification
     twoFactorEnabled?: boolean; // Whether 2FA is enabled
     twoFactorSecret?: string; // Secret for 2FA verification
