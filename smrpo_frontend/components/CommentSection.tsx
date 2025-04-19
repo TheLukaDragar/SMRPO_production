@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { updateStory } from "@/lib/actions/user-story-actions";
-import { UserStory, CommentEntry } from "@/lib/types/user-story-types";
+import { UserStory } from "@/lib/types/user-story-types";
+import { CommentEntry } from "@/lib/types/projectPosts-types";
 import { useUser } from "@/lib/hooks/useUser";
 
 export default function CommentSection({

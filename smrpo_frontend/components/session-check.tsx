@@ -9,13 +9,13 @@ interface SessionCheckProps {
 }
 
 export function SessionCheck({ children }: SessionCheckProps) {
-  const { user, isLoading } = useUser();
+  const { user, loading } = useUser();
   const router = useRouter();
   const [verified, setVerified] = useState(false);
 
   useEffect(() => {
     // If we're still loading the user, don't do anything yet
-    if (isLoading) return;
+    if (loading) return;
 
     // If there's no user, they'll be redirected by middleware
     if (!user) return;
@@ -47,7 +47,7 @@ export function SessionCheck({ children }: SessionCheckProps) {
       // No 2FA needed, render the page
       setVerified(true);
     }
-  }, [user, isLoading, router]);
+  }, [user, loading, router]);
 
   // Only render children if user exists and verification is complete
   if (!user || (user.twoFactorEnabled && !verified)) {

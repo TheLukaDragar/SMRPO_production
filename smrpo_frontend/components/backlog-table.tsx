@@ -95,7 +95,7 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                 ...newUserStory
             };
 
-            setItems([...items, updatedUserStoryId]);
+            setItems([...items, updatedUserStoryId as UserStory]);
             setIsModalOpen(false);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred while adding the story');
@@ -129,8 +129,9 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                                 draggableId={story_data._id}
                                 index={index}
                                 storyData={story_data}
-                                userRole={userRole}
-
+                                userRole={userRole || ""}
+                                team={projectUsers}
+                                comment={""}
                             />
                         ))}
                         {provided.placeholder}

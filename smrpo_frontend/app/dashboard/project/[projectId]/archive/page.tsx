@@ -15,7 +15,7 @@ import { sprint, sprintNoId } from "@/lib/types/sprint-types";
 import { useProject } from "@/lib/contexts/project-context";
 import { getProjectMembers } from "@/lib/actions/project-actions";
 import { getUsersByIds } from "@/lib/actions/user-actions";
-import { TimeLoggingPopup } from '@/components/TimeLoggingPopup';
+//import { TimeLoggingPopup } from '@/components/TimeLoggingPopup';
 
 export default function DNDPage() {
     const [isRefetching, setIsRefetching] = useState(false);
@@ -27,10 +27,24 @@ export default function DNDPage() {
     const [selectedStory, setSelectedStory] = useState<UserStory | null>(null);
     const [selectedSprint, setSelectedSprint] = useState<string | null>(null);
 
+    const fetchUserData = useCallback(async (users: string[]) => {
+        try {
+            setIsRefetching(true);
+            const userData = await getUsersByIds(users);
+            console.log("in_str", users);
+            console.log("usr dat:" + JSON.stringify(userData));
+            setProjectUsers(userData);
+        } catch (error) {
+            console.error("Error fetching userData:", error);
+        } finally {
+            setIsRefetching(false);
+        }
+    }, []);
+
     const fetchProjectUsers = useCallback(async () => {
         try {
             setIsRefetching(true);
-            const users = await getProjectMembers(activeProject?._id);
+            const users = await getProjectMembers(activeProject?._id ?? "");
             console.log('Users JSON:', JSON.stringify(users));
             const usr_ids = users.map((user: User) => user._id);
             console.log("usr_ids: ", usr_ids);
@@ -40,7 +54,7 @@ export default function DNDPage() {
         } finally {
             setIsRefetching(false);
         }
-    }, [activeProject]);
+    }, [activeProject, fetchUserData]);
 
     const fetchSprints = useCallback(async () => {
         try {
@@ -77,20 +91,6 @@ export default function DNDPage() {
             setStories(storiesData);
         } catch (error) {
             console.error("Error fetching stories:", error);
-        } finally {
-            setIsRefetching(false);
-        }
-    }, []);
-
-    const fetchUserData = useCallback(async (users: string[]) => {
-        try {
-            setIsRefetching(true);
-            const userData = await getUsersByIds(users);
-            console.log("in_str", users);
-            console.log("usr dat:" + JSON.stringify(userData));
-            setProjectUsers(userData);
-        } catch (error) {
-            console.error("Error fetching userData:", error);
         } finally {
             setIsRefetching(false);
         }
@@ -173,7 +173,7 @@ export default function DNDPage() {
                             <div className="flex space-x-4 overflow-x-auto">
                                 {currentSprint.sprintParts && currentSprint.sprintParts.map((part) => (
                                     <StoryTable
-                                        droppableId={`${currentSprint._id}-${part}`}
+                                        ID={`${currentSprint._id}-${part}`}
                                         key={part}
                                         title={part}
                                         items={stories.filter(story => story.SprintPosition === part && story.sprintID === currentSprint._id)}
@@ -199,6 +199,7 @@ export default function DNDPage() {
                 </div>
             </DragDropContext>
 
+            {/*
             {selectedStory && (
                 <TimeLoggingPopup
                     story={selectedStory}
@@ -206,6 +207,7 @@ export default function DNDPage() {
                     onCancel={() => setSelectedStory(null)}
                 />
             )}
+            */}
         </div>
     );
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { Project } from '@/lib/types/project-types'
 import { getProjects, getProjectById } from '@/lib/actions/project-actions'
 
@@ -22,7 +22,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
       const response = await getProjects()
       if ('error' in response) {
@@ -38,7 +38,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [activeProject])
 
   const refreshActiveProject = async () => {
     if (activeProject?._id) {
@@ -51,7 +51,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchProjects()
-  }, [])
+  }, [fetchProjects])
 
   return (
     <ProjectContext.Provider 

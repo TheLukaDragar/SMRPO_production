@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { Draggable } from "@hello-pangea/dnd";
-import { UserStory } from "@/lib/types/user-story-types";
 import { useUser } from "@/lib/hooks/useUser";
 import { updateStory, getTasks } from "@/lib/actions/user-story-actions";
 import { tasks } from "@/lib/types/tasks";
@@ -17,48 +16,65 @@ import {
 } from "@/components/ui/collapsible";
 import TextAreaTests from "@/components/TextAreaTests";
 import CommentSection from "@/components/CommentSection";
+import { CommentEntry } from "@/lib/types/projectPosts-types";
+import { UserStory } from "@/lib/types/user-story-types";
 
-export interface UserStory {
-    id: string;
-    title: string;
-    description: string;
-    priority: string;
-    storyPoints?: number;
-    SprintPosition: string;
-    createdAt: string;
-    owner?: {
-        userName: string;
-    };
-    comments?: CommentEntry[];
-}
+
 
 interface UserStoryCardProps {
     ID: string;
-    draggableId: string;
-    index: number;
-    storyData: UserStory;
-    userRole: string;
-    team: User[];
-    comment: string;
+    title: string;
+    items: UserStory[];
+    projectUsers: User[];
+    setItems: React.Dispatch<React.SetStateAction<UserStory[]>>;
 }
 
-const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, storyData, userRole, team }) => {
+const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, title, items, projectUsers, setItems }) => {
     const { user } = useUser();
     const [isScrumMaster, setIsScrumMaster] = useState(false);
     const [isDeveloper, setIsDeveloper] = useState(false);
     const [isValid, setIsValid] = useState(true);
     const [validationMessage, setValidationMessage] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editedStory, setEditedStory] = useState<UserStory>({ ...storyData });
+    const [editedStory, setEditedStory] = useState<UserStory>({ ...items[0] });
     const [storyTasks, setStoryTasks] = useState<tasks[]>([]);
     const [isTasksOpen, setIsTasksOpen] = useState(true);
+
+    const handleDoubleClick = () => {
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+    };
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setIsModalOpen(false);
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEditedStory({ ...editedStory, [e.target.name]: e.target.value });
+    };
+
+    const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEditedStory({ ...editedStory, [e.target.name]: parseInt(e.target.value) });
+    };
+
+    const handleTaskAdded = (task: tasks) => {
+        setStoryTasks(prev => [...prev, task]);
+    };
+
+    const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setEditedStory({ ...editedStory, [e.target.name]: e.target.value });
+    };
 
     return (
         <div>
             <Draggable
                 key={ID}
-                draggableId={draggableId}
-                index={index}
+                draggableId={ID}
+                index={items.indexOf(items[0])}
                 isDragDisabled={!isScrumMaster || !isValid}
             >
                 {(provided, snapshot) => (
@@ -73,7 +89,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                         onDoubleClick={handleDoubleClick}
                     >
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-semibold text-gray-800">{storyData.title}</h3>
+                            <h3 className="text-xl font-semibold text-gray-800">{title}</h3>
                             <div className="flex items-center space-x-2">
                                 {!isValid && (
                                     <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
@@ -81,35 +97,31 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                     </span>
                                 )}
                                 <span
-                                    className={`text-sm px-2 py-1 rounded-full ${storyData.priority === 'Must have'
+                                    className={`text-sm px-2 py-1 rounded-full ${editedStory.priority === 'Must have'
                                         ? 'bg-red-500 text-white'
-                                        : storyData.priority === 'Should have'
+                                        : editedStory.priority === 'Should have'
                                             ? 'bg-yellow-500 text-white'
                                             : 'bg-green-500 text-white'
                                     }`}
                                 >
-                                    {storyData.priority}
+                                    {editedStory.priority}
                                 </span>
                             </div>
                         </div>
 
-                        <p className="text-gray-600 mb-4">{storyData.description}</p>
+                        <p className="text-gray-600 mb-4">{editedStory.description}</p>
 
                         <div className="grid grid-cols-2 gap-2 text-sm text-gray-500 mb-3">
-                            <p><strong>Owner:</strong> {storyData.owner?.userName || "Unassigned"}</p>
-                            <p className={!storyData.storyPoints ? "text-red-500" : ""}>
-                                <strong>Story Points:</strong> {storyData.storyPoints || "Not estimated"}
+                            <p><strong>Owner:</strong> {editedStory.owner?.userName || "Unassigned"}</p>
+                            <p className={!editedStory.storyPoints ? "text-red-500" : ""}>
+                                <strong>Story Points:</strong> {editedStory.storyPoints || "Not estimated"}
                             </p>
-                            <p><strong>Status:</strong> {storyData.SprintPosition}</p>
-                            <p className="col-span-2"><strong>Created:</strong> {new Date(storyData.createdAt).toLocaleDateString()}</p>
-                            {/*<CommentSection storyId={draggableId} />*/}
+                            <p><strong>Status:</strong> {editedStory.SprintPosition}</p>
+                            <p className="col-span-2"><strong>Created:</strong> {new Date(editedStory.createdAt).toLocaleDateString()}</p>
                             <CommentSection
-                                storyId={draggableId}
-                                initialComment={storyData.comment || ""}
-                                storyData={storyData}
+                                storyId={ID}
+                                storyData={editedStory}
                             />
-
-
                         </div>
 
                         {storyTasks.length > 0 && (
@@ -190,7 +202,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                     <select
                                         name="priority"
                                         value={editedStory.priority || ''}
-                                        onChange={handleInputChange}
+                                        onChange={handleSelectChange}
                                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     >
                                         <option value="Wont Have">Wont Have</option>
@@ -218,7 +230,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                     <select
                                         name="SprintPosition"
                                         value={editedStory.SprintPosition || ''}
-                                        onChange={handleInputChange}
+                                        onChange={handleSelectChange}
                                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     >
                                         <option value="Backlog">Backlog</option>
@@ -256,11 +268,11 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                 <div className="bg-gray-50 p-4 rounded border border-gray-200">
                                     <h4 className="text-md font-medium text-gray-700 mb-3">Add New Task</h4>
                                     <AddTaskForm
-                                        userStoryId={draggableId}
-                                        team={team}
+                                        userStoryId={ID}
+                                        team={projectUsers}
                                         isDeveloper={isDeveloper}
                                         isScrumMaster={isScrumMaster}
-                                        sprintPosition={storyData.SprintPosition}
+                                        sprintPosition={editedStory.SprintPosition}
                                         onTaskAdded={handleTaskAdded}
                                     />
                                 </div>

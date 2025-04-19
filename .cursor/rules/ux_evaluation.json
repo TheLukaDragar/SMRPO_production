@@ -1,0 +1,5 @@
+{
+  "description": "Automatically evaluate UI/UX changes after feature implementation",
+  "pattern": "**/*.{tsx,jsx,ts,js,html,css,scss}",
+  "rule": "Call the web ux evaluator to test any UI / UX changes after a feature is implemented to ensure functionality and experience quality"
+}

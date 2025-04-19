@@ -19,8 +19,9 @@ import AddSprintModal from '@/components/AddSprintModal';
 import { useUser } from "@/lib/hooks/useUser";
 import BacklogTable from "@/components/backlog-table";
 import { use } from 'react';
+import { useParams } from "next/navigation";
 
-export default function DNDPage({ params }: { params: { projectId: string } }) {
+export default function DNDPage() {
     const [isRefetching, setIsRefetching] = useState(false);
     const [stories, setStories] = useState<UserStory[]>([]);
     const [columns, setColumns] = useState<sprint[]>([]);
@@ -31,7 +32,9 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
     const [isSprintModalOpen, setIsSprintModalOpen] = useState(false);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-    const projectId = use(params).projectId;
+    const params = useParams();
+    
+    const projectId = params.projectId as string;
     const { user } = useUser();
 
     const renderLoading = () => (
@@ -39,6 +42,21 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
     );
+
+    const fetchUserData = useCallback(async (users: string[]) => {
+        try {
+            setIsRefetching(true);
+            const userData = await getUsersByIds(users);
+            console.log("in_str", users);
+            console.log("usr dat:" + JSON.stringify(userData));
+            setProjectUsers(userData);
+        } catch (error) {
+            console.error("Error fetching userData:", error);
+        } finally {
+            setIsRefetching(false);
+            setIsLoadingUsers(false);
+        }
+    }, []);
 
     const fetchProjectUsers = useCallback(async () => {
         try {
@@ -79,7 +97,7 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
         } finally {
             setIsRefetching(false);
         }
-    }, [projectId, user]);
+    }, [projectId, user, fetchUserData]);
 
     const fetchSprints = useCallback(async () => {
         try {
@@ -116,21 +134,6 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
         }
     }, []);
 
-    const fetchUserData = useCallback(async (users: string[]) => {
-        try {
-            setIsRefetching(true);
-            const userData = await getUsersByIds(users);
-            console.log("in_str", users);
-            console.log("usr dat:" + JSON.stringify(userData));
-            setProjectUsers(userData);
-        } catch (error) {
-            console.error("Error fetching userData:", error);
-        } finally {
-            setIsRefetching(false);
-            setIsLoadingUsers(false);
-        }
-    }, []);
-
     useEffect(() => {
         console.log("project users: ", projectUsers);
     }, [projectUsers]);
@@ -141,7 +144,7 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
         fetchSprints();
         fetchProjectUsers();
         console.log("role: ", userRole)
-    }, [projectId, fetchProjectUsers, fetchSprints, fetchStories]);
+    }, [projectId, fetchProjectUsers, fetchSprints, fetchStories, userRole]);
 
     const handleDragEnd = (result: DropResult) => {
         if (!result.destination) return;
@@ -274,14 +277,14 @@ export default function DNDPage({ params }: { params: { projectId: string } }) {
                                                 </div>
                                                 <div className="flex space-x-6 overflow-x-auto">
                                                     {sprint.sprintParts && sprint.sprintParts.map((part) => (
-                                                        <StoryTable
+                                                        <BacklogTable
                                                             droppableId={`${sprint._id}-${part}`}
                                                             key={part}
                                                             title={part}
                                                             items={stories.filter(story => story.SprintPosition === part && story.sprintID === sprint._id)}
                                                             projectUsers={projectUsers}
                                                             setItems={setStories}
-                                                            userRole={userRole || undefined}
+                                                            userRole={userRole || ""}
                                                         />
                                                     ))}
                                                 </div>

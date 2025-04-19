@@ -1,5 +1,5 @@
 import {User} from "@/lib/types/user-types";
-
+import { CommentEntry } from "@/lib/types/projectPosts-types";
 export interface UserStory {
     _id: string;
     title: string;
@@ -11,6 +11,7 @@ export interface UserStory {
     sprintID: string
     SprintPosition: string
     createdAt: Date;
+    comments: CommentEntry[];
 }
 
 export interface UserStoryNoId {

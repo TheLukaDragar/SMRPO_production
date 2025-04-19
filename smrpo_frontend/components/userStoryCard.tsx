@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import { UserStory } from "@/lib/types/user-story-types";
 import { useUser } from "@/lib/hooks/useUser";
@@ -17,20 +17,7 @@ import {
 } from "@/components/ui/collapsible";
 import TextAreaTests from "@/components/TextAreaTests";
 import CommentSection from "@/components/CommentSection";
-
-export interface UserStory {
-    id: string;
-    title: string;
-    description: string;
-    priority: string;
-    storyPoints?: number;
-    SprintPosition: string;
-    createdAt: string;
-    owner?: {
-        userName: string;
-    };
-    comments?: CommentEntry[];
-}
+import { CommentEntry } from "@/lib/types/projectPosts-types";
 
 interface UserStoryCardProps {
     ID: string;
@@ -53,18 +40,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
     const [storyTasks, setStoryTasks] = useState<tasks[]>([]);
     const [isTasksOpen, setIsTasksOpen] = useState(true);
 
-    useEffect(() => {
-        setIsScrumMaster(userRole === "SCRUM_MASTER");
-        setIsDeveloper(userRole === "DEVELOPER" || userRole === "SCRUM_MASTER");
-        validateStory();
-        fetchTasks();
-    }, [user, storyData, ID, draggableId, userRole]);
-
-    useEffect(() => {
-        setEditedStory({ ...storyData });
-    }, [storyData]);
-
-    const validateStory = () => {
+    const validateStory = useCallback(() => {
         let valid = true;
         let message = "";
 
@@ -79,7 +55,28 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
 
         setIsValid(valid);
         setValidationMessage(message);
-    };
+    }, [storyData.storyPoints, storyData.SprintPosition]);
+
+    const fetchTasks = useCallback(async () => {
+        try {
+            const response = await getTasks()
+            const filtered = response.filter((task: tasks) => task.userStoryId == draggableId)
+            setStoryTasks(filtered);
+        } catch (error) {
+            console.error("Error fetching tasks:", error);
+        }
+    }, [draggableId]);
+
+    useEffect(() => {
+        setIsScrumMaster(userRole === "SCRUM_MASTER");
+        setIsDeveloper(userRole === "DEVELOPER" || userRole === "SCRUM_MASTER");
+        validateStory();
+        fetchTasks();
+    }, [user, storyData, ID, draggableId, userRole, validateStory, fetchTasks]);
+
+    useEffect(() => {
+        setEditedStory({ ...storyData });
+    }, [storyData]);
 
     const handleDoubleClick = () => {
         setIsModalOpen(true);
@@ -123,16 +120,6 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
     const handleTaskAdded = (newTask: tasks) => {
         setStoryTasks(prev => [...prev, newTask]);
         fetchTasks();
-    };
-
-    const fetchTasks = async () => {
-        try {
-            const response = await getTasks()
-            const filtered = response.filter((task: tasks) => task.userStoryId == draggableId)
-            setStoryTasks(filtered);
-        } catch (error) {
-            console.error("Error fetching tasks:", error);
-        }
     };
 
     return (
@@ -184,14 +171,10 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                             </p>
                             <p><strong>Status:</strong> {storyData.SprintPosition}</p>
                             <p className="col-span-2"><strong>Created:</strong> {new Date(storyData.createdAt).toLocaleDateString()}</p>
-                            {/*<CommentSection storyId={draggableId} />*/}
                             <CommentSection
                                 storyId={draggableId}
-                                initialComment={storyData.comment || ""}
                                 storyData={storyData}
                             />
-
-
                         </div>
 
                         {storyTasks.length > 0 && (

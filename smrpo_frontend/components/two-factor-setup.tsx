@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { User } from "@/lib/types/user-types"
-import { setupTwoFactor, verifyAndEnableTwoFactor, disableTwoFactor } from "@/lib/actions/two-factor-actions"
+import { setupTwoFactor, verifyAndActivateTwoFactor, disableTwoFactor } from "@/lib/actions/two-factor-actions"
 import { useToast } from "@/components/ui/use-toast"
 import { Shield, AlertTriangle, Check, Copy, Smartphone, LockKeyhole } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -21,7 +21,6 @@ export function TwoFactorSetup({ user, onSetupComplete }: TwoFactorSetupProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [setupData, setSetupData] = useState<{ qrCodeUrl: string; secret: string; recoveryCode?: string } | null>(null);
   const [token, setToken] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<"initial" | "setup" | "verify">("initial");
   const [disablePassword, setDisablePassword] = useState("");
@@ -52,7 +51,7 @@ export function TwoFactorSetup({ user, onSetupComplete }: TwoFactorSetupProps) {
     setError(null);
 
     try {
-      const result = await verifyAndEnableTwoFactor(user._id, token, password);
+      const result = await verifyAndActivateTwoFactor(user._id, token);
       if ("error" in result) {
         setError(result.error.message);
       } else {
@@ -199,7 +198,7 @@ export function TwoFactorSetup({ user, onSetupComplete }: TwoFactorSetupProps) {
             <div>
               <h3 className="text-sm font-medium">Authenticator App</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                You'll need an authenticator app like Google Authenticator, Microsoft Authenticator, 
+                You&apos;ll need an authenticator app like Google Authenticator, Microsoft Authenticator, 
                 or Authy to use two-factor authentication.
               </p>
             </div>
@@ -212,7 +211,7 @@ export function TwoFactorSetup({ user, onSetupComplete }: TwoFactorSetupProps) {
             <div>
               <h3 className="text-sm font-medium">Recovery Codes</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                You'll get a recovery code to use if you lose access to your authenticator app.
+                You&apos;ll get a recovery code to use if you lose access to your authenticator app.
                 Save it in a secure place.
               </p>
             </div>
@@ -249,7 +248,7 @@ export function TwoFactorSetup({ user, onSetupComplete }: TwoFactorSetupProps) {
           
           <div className="flex flex-col items-center space-y-4">
             <div className="bg-white p-2 rounded-lg border">
-              <img 
+              <Image 
                 src={setupData.qrCodeUrl} 
                 alt="QR Code for authenticator app"
                 width={200}
@@ -260,7 +259,7 @@ export function TwoFactorSetup({ user, onSetupComplete }: TwoFactorSetupProps) {
             
             <div className="space-y-2 w-full">
               <label className="block text-sm font-medium text-gray-700">
-                Secret Key (if you can't scan the QR code)
+                Secret Key (if you can&apos;t scan the QR code)
               </label>
               <div className="flex items-center gap-2">
                 <Input
@@ -353,24 +352,6 @@ export function TwoFactorSetup({ user, onSetupComplete }: TwoFactorSetupProps) {
               />
               <p className="text-xs text-muted-foreground">
                 Open your authenticator app to view your verification code
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-medium">
-                Current Password
-              </label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your current password"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter your password to confirm you want to enable two-factor authentication
               </p>
             </div>
             

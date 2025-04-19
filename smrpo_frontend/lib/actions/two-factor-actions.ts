@@ -66,7 +66,7 @@ export async function verifyAndActivateTwoFactor(userId: string, token: string):
     }
     
     // Generate a recovery code
-    const recoveryCode = generateRecoveryCode();
+    const recoveryCode =  await generateRecoveryCode();
     
     // Activate 2FA for the user
     await db().collection('users').updateOne(
@@ -135,7 +135,7 @@ export async function verifyTwoFactorLogin(token: string, userId: string): Promi
       if (!user.twoFactorSecret) {
         return createErrorResponse(new AppError('Two-factor secret not found', 500, 'ServerError'));
       }
-      isValid = verifyToken(token, user.twoFactorSecret);
+      isValid = await verifyToken(token, user.twoFactorSecret);
     }
     
     if (!isValid) {
@@ -204,4 +204,6 @@ async function generateQRCode(otpauthUrl: string): Promise<string> {
     console.error('Error generating QR code:', error);
     throw new Error('Failed to generate QR code');
   }
+
+
 } 

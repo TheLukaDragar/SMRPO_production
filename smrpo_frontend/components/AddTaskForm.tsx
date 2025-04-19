@@ -138,7 +138,8 @@ export function AddTaskForm({ userStoryId, team, isDeveloper, isScrumMaster, spr
                 dueDate: newTask.dueDate || new Date(),
                 AssignedTo: newTask.AssignedTo,
                 timeLogged: 0,
-                timeEstimate: newTask.timeEstimate!
+                timeEstimate: newTask.timeEstimate!,
+                startLog: null
             };
 
             const result = await addTask(taskToAdd);

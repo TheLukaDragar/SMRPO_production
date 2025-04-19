@@ -16,6 +16,7 @@ import { PasswordStrengthMeter } from "@/components/password-strength-meter"
 import { setupTwoFactor, verifyAndActivateTwoFactor, disableTwoFactor } from "@/lib/actions/two-factor-actions"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import Image from "next/image"
 
 export default function ProfilePage() {
   const { user, mutateUser } = useUser()
@@ -809,7 +810,7 @@ export default function ProfilePage() {
                         Two-factor authentication adds an extra layer of security to your account by requiring a code from your phone in addition to your password.
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        You'll need an authenticator app like Google Authenticator, Microsoft Authenticator, or Authy to use this feature.
+                        You&apos;ll need an authenticator app like Google Authenticator, Microsoft Authenticator, or Authy to use this feature.
                       </p>
                     </div>
                   </div>
@@ -825,7 +826,7 @@ export default function ProfilePage() {
                         <p className="mb-2">1. Scan this QR code with your authenticator app</p>
                         <div className="flex justify-center my-4 bg-white p-4 rounded-md max-w-[200px] mx-auto">
                           {twoFactorSetupData.qrCodeUrl && (
-                            <img 
+                            <Image 
                               src={twoFactorSetupData.qrCodeUrl} 
                               alt="QR Code for 2FA" 
                               width={200}
@@ -902,7 +903,7 @@ export default function ProfilePage() {
               Save Your Recovery Code
             </DialogTitle>
             <DialogDescription>
-              Store this recovery code in a safe place. You'll need it if you lose access to your authentication app.
+              Store this recovery code in a safe place. You&apos;ll need it if you lose access to your authenticator app.
             </DialogDescription>
           </DialogHeader>
           
@@ -917,7 +918,7 @@ export default function ProfilePage() {
               </p>
               <p>
                 If you lose both your authenticator device and this recovery code,
-                you will be locked out of your account.
+                you&apos;ll be locked out of your account.
               </p>
             </div>
           </div>
@@ -938,7 +939,7 @@ export default function ProfilePage() {
               onClick={() => setShowRecoveryDialog(false)}
               className="mt-2 sm:mt-0"
             >
-              I've Saved My Code
+              I&apos;ve Saved My Code
             </Button>
           </DialogFooter>
         </DialogContent>

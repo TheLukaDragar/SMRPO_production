@@ -40,8 +40,9 @@ const ProjectWallPosts: React.FC<ProjectWallPostsProps> = ({ project_id, posts, 
             ...newPost,
             comments: []
         };
-
-        setPosts([...posts, updatedUserStoryId]);
+        if (posts) {
+            setPosts([...posts, updatedUserStoryId as projectPosts]);
+        }
         setInput('');
     }
 

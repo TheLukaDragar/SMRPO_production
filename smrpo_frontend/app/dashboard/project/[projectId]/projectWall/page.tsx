@@ -5,12 +5,14 @@ import ProjectWallPosts from "@/components/ProjectWallPosts";
 import { projectPosts } from "@/lib/types/projectPosts-types";
 import { getPostsById } from "@/lib/actions/user-story-actions";
 import { useUser } from "@/lib/hooks/useUser";
+import { useParams } from "next/navigation";
 
-export default function ProjectWall({ params }: { params: { projectId: string } }) {
+export default function ProjectWall() {
     const [posts, setPosts] = useState<projectPosts[]>([]);
     const { user } = useUser();
+    const params = useParams();
 
-    const projectId = use(params).projectId;
+    const projectId = params.projectId as string;
 
     const fetchPostsById = useCallback(async () => {
         try {

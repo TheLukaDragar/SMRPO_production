@@ -1,6 +1,16 @@
+import { Suspense } from 'react';
 import { GalleryVerticalEnd } from "lucide-react"
-
+import Image from "next/image"
 import { LoginForm } from "@/components/login-form"
+
+// Define a simple fallback component (can be shared or customized)
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <p>Loading form...</p> 
+    </div>
+  );
+}
 
 export default function LoginPage() {
   return (
@@ -16,12 +26,14 @@ export default function LoginPage() {
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
-            <LoginForm />
+            <Suspense fallback={<LoadingFallback />}>
+              <LoginForm />
+            </Suspense>
           </div>
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
-        <img
+        <Image
           src="/placeholder.svg"
           alt="Image"
           className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"

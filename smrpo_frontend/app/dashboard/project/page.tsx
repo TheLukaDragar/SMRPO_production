@@ -65,7 +65,7 @@ export default function ProjectRedirectPage() {
         <CardHeader>
           <CardTitle>No Project Selected</CardTitle>
           <CardDescription>
-            You don't have any active projects. Please create a project or select one from the project switcher.
+            You dont have any active projects. Please create a project or select one from the project switcher.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex gap-2">
