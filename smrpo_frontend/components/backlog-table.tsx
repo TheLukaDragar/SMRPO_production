@@ -22,6 +22,8 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    console.log("BacklogTable userRole", userRole);
+
     const [newUserStory, setNewUserStory] = useState({
         title: "",
         description: "",
@@ -126,8 +128,8 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                                 userRole={userRole || ""}
                                 team={projectUsers}
                                 comment={""}
-                                projectMembers={projectUsers.map(u => ({ userId: typeof u._id === "object" ? u._id.$oid : u._id, role: u.role }))}
-                                currentUserId={typeof user?._id === "object" ? user._id.$oid : user?._id}
+                                projectMembers={projectUsers.map(u => ({ userId: typeof u._id === "object" ? (u._id as any).$oid : u._id, role: u.role }))}
+                                currentUserId={typeof user?._id === "object" ? (user._id as any).$oid : user?._id}
                                 onStoryUpdated={(updatedStory) => {
                                     setItems(prev =>
                                         prev.map(s => s._id === updatedStory._id ? updatedStory : s)
