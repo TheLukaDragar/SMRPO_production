@@ -197,3 +197,31 @@ export async function addCommentToPost(postId: string, comment: { text: string; 
         modifiedCount: result.modifiedCount,
     };
 }
+
+// Get user role in a project
+export async function getUserProjectRole(userId: string, projectId: string) {
+    try {
+        if (!userId || !projectId) {
+            throw new Error('User ID and Project ID are required');
+        }
+
+        const { db } = await connectToDatabase();
+        
+        // Find the project and check if the user is a member
+        const project = await db().collection('projects').findOne({
+            _id: new ObjectId(projectId),
+            'members.userId': userId
+        });
+
+        if (!project) {
+            return null; // User is not a member of this project
+        }
+
+        // Find the member and return their role
+        const member = project.members.find((m: any) => m.userId === userId);
+        return member ? member.role : null;
+    } catch (error) {
+        console.error("Error getting user project role:", error);
+        return null;
+    }
+}

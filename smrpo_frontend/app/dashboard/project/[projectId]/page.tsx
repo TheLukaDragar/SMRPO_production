@@ -357,6 +357,8 @@ function getRoleBadgeVariant(role: ProjectRole) {
       return 'default';
     case ProjectRole.SCRUM_MASTER:
       return 'secondary';
+    case ProjectRole.SCRUM_DEV:
+      return 'secondary';
     case ProjectRole.DEVELOPER:
       return 'outline';
     default:

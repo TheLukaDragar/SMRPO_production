@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import { useUser } from "@/lib/hooks/useUser";
-import { updateStory, getTasks } from "@/lib/actions/user-story-actions";
+import { updateStory, getTasks, getUserProjectRole } from "@/lib/actions/user-story-actions";
 import { tasks } from "@/lib/types/tasks";
 import { User } from "@/lib/types/user-types";
 import { TaskCard } from "@/components/TaskCard";
@@ -27,18 +27,52 @@ interface UserStoryCardProps {
     items: UserStory[];
     projectUsers: User[];
     setItems: React.Dispatch<React.SetStateAction<UserStory[]>>;
+    projectId?: string;
 }
 
-const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, title, items, projectUsers, setItems }) => {
+const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, title, items, projectUsers, setItems, projectId: propProjectId }) => {
     const { user } = useUser();
     const [isScrumMaster, setIsScrumMaster] = useState(false);
     const [isDeveloper, setIsDeveloper] = useState(false);
+    const [isProductOwner, setIsProductOwner] = useState(false);
     const [isValid, setIsValid] = useState(true);
     const [validationMessage, setValidationMessage] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editedStory, setEditedStory] = useState<UserStory>({ ...items[0] });
     const [storyTasks, setStoryTasks] = useState<tasks[]>([]);
     const [isTasksOpen, setIsTasksOpen] = useState(true);
+    const [userRole, setUserRole] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Fetch tasks for this story
+        const loadTasks = async () => {
+            try {
+                const allTasks = await getTasks();
+                const filteredTasks = allTasks.filter((task: tasks) => task.userStoryId === ID);
+                setStoryTasks(filteredTasks);
+            } catch (error) {
+                console.error("Error loading tasks:", error);
+            }
+        };
+
+        // Get user role for this project
+        const getUserRole = async () => {
+            if (user?._id && propProjectId) {
+                try {
+                    const role = await getUserProjectRole(user._id, propProjectId);
+                    setUserRole(role);
+                    setIsScrumMaster(role === 'SCRUM_MASTER' || role === 'SCRUM_DEV');
+                    setIsDeveloper(role === 'DEVELOPER' || role === 'SCRUM_DEV');
+                    setIsProductOwner(role === 'PRODUCT_OWNER');
+                } catch (error) {
+                    console.error("Error getting user role:", error);
+                }
+            }
+        };
+
+        loadTasks();
+        getUserRole();
+    }, [ID, user, propProjectId]);
 
     const handleDoubleClick = () => {
         setIsModalOpen(true);
@@ -68,6 +102,8 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, title, items, project
     const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setEditedStory({ ...editedStory, [e.target.name]: e.target.value });
     };
+
+    
 
     return (
         <div>
@@ -121,6 +157,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, title, items, project
                             <CommentSection
                                 storyId={ID}
                                 storyData={editedStory}
+                                userRole={userRole || ""}
                             />
                         </div>
 

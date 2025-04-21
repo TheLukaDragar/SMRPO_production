@@ -77,8 +77,8 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
     }, [draggableId]);
 
     useEffect(() => {
-        setIsScrumMaster(userRole === "SCRUM_MASTER");
-        setIsDeveloper(userRole === "DEVELOPER" || userRole === "SCRUM_MASTER");
+        setIsScrumMaster(userRole === "SCRUM_MASTER" || userRole === "SCRUM_DEV");
+        setIsDeveloper(userRole === "DEVELOPER" || userRole === "SCRUM_MASTER" || userRole === "SCRUM_DEV");
         setIsProductOwner(userRole === "PRODUCT_OWNER");
         validateStory();
         fetchTasks();
