@@ -38,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { InfoIcon } from "lucide-react"
 
 interface AddTeamMemberDialogProps {
   projectId: string;
@@ -45,6 +46,7 @@ interface AddTeamMemberDialogProps {
   onOpenChange?: (open: boolean) => void;
   trigger?: React.ReactNode;
   onSuccess?: () => void;
+  onAddMember?: (userId: string, role: ProjectRole) => void;
 }
 
 export function AddTeamMemberDialog({ 
@@ -52,7 +54,8 @@ export function AddTeamMemberDialog({
   open: externalOpen, 
   onOpenChange: externalOnOpenChange, 
   trigger,
-  onSuccess 
+  onSuccess,
+  onAddMember
 }: AddTeamMemberDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -100,6 +103,19 @@ export function AddTeamMemberDialog({
       if (!selectedUser) {
         throw new Error("Please select a user")
       }
+      
+      // If onAddMember prop is provided, use it instead of server call
+      if (onAddMember) {
+        onAddMember(selectedUser.user._id, selectedUser.role);
+        
+        // Reset dialog state
+        setSelectedUser(null)
+        setSearchQuery("")
+        setOpen(false)
+        return;
+      }
+      
+      // Otherwise use server-side call
       console.log(selectedUser)
       console.log(projectId)
 
@@ -159,6 +175,22 @@ export function AddTeamMemberDialog({
               Add a new member to your project team.
             </DialogDescription>
           </DialogHeader>
+
+          {/* Role constraints info */}
+          <div className="mt-4 p-3 border rounded-md bg-blue-50/50 flex gap-2 items-start">
+            <InfoIcon className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">Team Role Requirements:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Project must have exactly one Product Owner</li>
+                <li>Project must have at least one Scrum Master (or Scrum Dev)</li>
+                <li>Project must have at least one Developer</li>
+                <li>Project can have at most one Scrum Master or Scrum Dev</li>
+                <li>A Scrum Dev counts as both a Scrum Master and a Developer</li>
+              </ul>
+            </div>
+          </div>
+
           {error && (
             <Alert variant="destructive" className="mt-4">
               <AlertDescription>{error}</AlertDescription>

@@ -2,7 +2,8 @@
 export enum ProjectRole {
     PRODUCT_OWNER = 'PRODUCT_OWNER',
     SCRUM_MASTER = 'SCRUM_MASTER',
-    DEVELOPER = 'DEVELOPER'
+    DEVELOPER = 'DEVELOPER',
+    SCRUM_DEV = 'SCRUM_DEV'
 }
 
 export interface BoardColumn {

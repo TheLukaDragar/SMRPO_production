@@ -105,6 +105,9 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
         // Convert to array and add joinedAt
         const seenUserIds = new Set<string>();
         let productOwnerCount = 0;
+        let scrumMasterCount = 0;
+        let hasDeveloper = false;
+        let hasScrumMaster = false;
 
         membersByIndex.forEach((member) => {
             if (member.userId && member.role) {
@@ -118,6 +121,17 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
                 if (member.role === ProjectRole.PRODUCT_OWNER) {
                     productOwnerCount++;
                 }
+                
+                // Count Scrum Master roles
+                if (member.role === ProjectRole.SCRUM_MASTER || member.role === ProjectRole.SCRUM_DEV) {
+                    scrumMasterCount++;
+                    hasScrumMaster = true;
+                }
+                
+                // Check for Developer roles
+                if (member.role === ProjectRole.DEVELOPER || member.role === ProjectRole.SCRUM_DEV) {
+                    hasDeveloper = true;
+                }
 
                 members.push({
                     userId: member.userId,
@@ -128,8 +142,18 @@ export async function handleAddProject(formData: FormData): Promise<ErrorRespons
         });
 
         // Validate PRODUCT_OWNER count
-        if (productOwnerCount === 0) {
+        if (productOwnerCount !== 1) {
             throw new AppError('Project must have exactly one Product Owner', 400, 'ValidationError');
+        }
+
+        // Validate Scrum Master roles
+        if (!hasScrumMaster) {
+            throw new AppError('Project must have at least one Scrum Master or Scrum Dev', 400, 'ValidationError');
+        }
+
+        // Validate Developer roles
+        if (!hasDeveloper) {
+            throw new AppError('Project must have at least one Developer', 400, 'ValidationError');
         }
 
         const projectData = {
@@ -266,7 +290,7 @@ export async function deleteProject(id: string): Promise<any | ErrorResponse> {
 export async function addProjectMember(projectId: string, userId: string, role: ProjectRole): Promise<any | ErrorResponse> {
     try {
         if (!projectId) throw new AppError('Project ID is required', 400, 'ValidationError');
-        console.log("addProjectMember", projectId, userId, role)
+        console.log("addProjectMember", projectId, userId, role);
 
         // Validate the member data
         const validatedData = validateAddProjectMember({ userId, role });
@@ -281,6 +305,31 @@ export async function addProjectMember(projectId: string, userId: string, role: 
 
         if (existingMember) {
             throw new AppError('User is already a member of this project', 400, 'ValidationError');
+        }
+        
+        // Get the project to check existing team composition
+        const project = await db().collection('projects').findOne({ _id: new ObjectId(projectId) });
+        if (!project) {
+            throw new AppError('Project not found', 404, 'NotFoundError');
+        }
+
+        // Check role constraints
+        // 1. If adding a Product Owner, ensure there's no existing Product Owner
+        if (role === ProjectRole.PRODUCT_OWNER) {
+            const existingProductOwner = project.members.some((m: any) => m.role === ProjectRole.PRODUCT_OWNER);
+            if (existingProductOwner) {
+                throw new AppError('Project already has a Product Owner', 400, 'ValidationError');
+            }
+        }
+        
+        // 2. If adding a Scrum Master or Scrum Dev, ensure there's no existing Scrum Master or Scrum Dev
+        if (role === ProjectRole.SCRUM_MASTER || role === ProjectRole.SCRUM_DEV) {
+            const existingScrumMaster = project.members.some(
+                (m: any) => m.role === ProjectRole.SCRUM_MASTER || m.role === ProjectRole.SCRUM_DEV
+            );
+            if (existingScrumMaster) {
+                throw new AppError('Project can have at most one Scrum Master or Scrum Dev', 400, 'ValidationError');
+            }
         }
 
         const result = await db().collection('projects').updateOne(
@@ -316,13 +365,68 @@ export async function addProjectMember(projectId: string, userId: string, role: 
 // Update member role in project
 export async function updateProjectMemberRole(projectId: string, userId: string, newRole: ProjectRole) {
     try {
-        if (!projectId) throw new Error('Project ID is required');
-        if (!userId) throw new Error('User ID is required');
+        if (!projectId) throw new AppError('Project ID is required', 400, 'ValidationError');
+        if (!userId) throw new AppError('User ID is required', 400, 'ValidationError');
 
         // Validate the role
         validateAddProjectMember({ userId, role: newRole });
 
         const { db } = await connectToDatabase();
+        
+        // Retrieve the project to check current roles
+        const project = await db().collection('projects').findOne({ _id: new ObjectId(projectId) });
+        
+        if (!project) {
+            throw new AppError('Project not found', 404, 'NotFoundError');
+        }
+        
+        // Get the current role of the user we're updating
+        const currentMember = project.members.find((member: any) => member.userId === userId);
+        if (!currentMember) {
+            throw new AppError('User is not a member of this project', 404, 'NotFoundError');
+        }
+        
+        // Count Product Owners and handle Product Owner role
+        if (currentMember.role === ProjectRole.PRODUCT_OWNER && newRole !== ProjectRole.PRODUCT_OWNER) {
+            // Check if this is the only Product Owner
+            const productOwnerCount = project.members.filter((m: any) => m.role === ProjectRole.PRODUCT_OWNER).length;
+            
+            if (productOwnerCount <= 1) {
+                throw new AppError('Cannot change the only Product Owner. Assign another Product Owner first.', 400, 'ValidationError');
+            }
+        }
+        
+        // For Scrum Master or Scrum Dev roles, ensure there's no more than one
+        if ((newRole === ProjectRole.SCRUM_MASTER || newRole === ProjectRole.SCRUM_DEV) && 
+            currentMember.role !== ProjectRole.SCRUM_MASTER && 
+            currentMember.role !== ProjectRole.SCRUM_DEV) {
+            
+            // Check if there's already a Scrum Master or Scrum Dev
+            const hasScrumMasterRole = project.members.some(
+                (m: any) => m.userId !== userId && 
+                (m.role === ProjectRole.SCRUM_MASTER || m.role === ProjectRole.SCRUM_DEV)
+            );
+            
+            if (hasScrumMasterRole) {
+                throw new AppError('Project can have at most one Scrum Master or Scrum Dev', 400, 'ValidationError');
+            }
+        }
+        
+        // Validate Developer requirement - ensure at least one developer remains
+        if ((currentMember.role === ProjectRole.DEVELOPER || currentMember.role === ProjectRole.SCRUM_DEV) && 
+            newRole !== ProjectRole.DEVELOPER && newRole !== ProjectRole.SCRUM_DEV) {
+            
+            // Count how many developers would remain after this change
+            const remainingDevs = project.members.filter(
+                (m: any) => m.userId !== userId && 
+                (m.role === ProjectRole.DEVELOPER || m.role === ProjectRole.SCRUM_DEV)
+            ).length;
+            
+            if (remainingDevs === 0) {
+                throw new AppError('Project must have at least one Developer', 400, 'ValidationError');
+            }
+        }
+
         const result = await db().collection('projects').updateOne(
             {
                 _id: new ObjectId(projectId),
@@ -336,35 +440,62 @@ export async function updateProjectMemberRole(projectId: string, userId: string,
         );
 
         if (result.matchedCount === 0) {
-            throw new Error('Project or member not found');
+            throw new AppError('Project or member not found', 404, 'NotFoundError');
         }
 
         revalidatePath('/dashboard');
         return result;
     } catch (error) {
         if (error instanceof ZodError) {
-            throw new Error(`Validation error: ${error.errors.map(e => e.message).join(', ')}`);
+            return createErrorResponse(new AppError(
+                `Validation error: ${error.errors.map(e => e.message).join(', ')}`,
+                400,
+                'ValidationError'
+            ));
         }
-        throw error;
+        return createErrorResponse(error);
     }
 }
 
 // Remove member from project
 export async function removeProjectMember(projectId: string, userId: string) {
     try {
-        if (!projectId) throw new Error('Project ID is required');
-        if (!userId) throw new Error('User ID is required');
+        if (!projectId) throw new AppError('Project ID is required', 400, 'ValidationError');
+        if (!userId) throw new AppError('User ID is required', 400, 'ValidationError');
 
         const { db } = await connectToDatabase();
 
-        // Check if this would remove the last member
+        // Get the project to check team composition
         const project = await db().collection('projects').findOne({ _id: new ObjectId(projectId) });
         if (!project) {
-            throw new Error('Project not found');
+            throw new AppError('Project not found', 404, 'NotFoundError');
         }
 
+        // Check if this would remove the last member
         if (project.members.length <= 1) {
-            throw new Error('Cannot remove the last member from a project');
+            throw new AppError('Cannot remove the last member from a project', 400, 'ValidationError');
+        }
+
+        // Get the member we're trying to remove
+        const memberToRemove = project.members.find((m: any) => m.userId === userId);
+        if (!memberToRemove) {
+            throw new AppError('User is not a member of this project', 404, 'NotFoundError');
+        }
+
+        // Check if we're trying to remove the Product Owner
+        if (memberToRemove.role === ProjectRole.PRODUCT_OWNER) {
+            throw new AppError('Cannot remove the Product Owner. Assign another member as Product Owner first.', 400, 'ValidationError');
+        }
+
+        // Check if we're trying to remove the only Scrum Master/Scrum Dev
+        if (memberToRemove.role === ProjectRole.SCRUM_MASTER || memberToRemove.role === ProjectRole.SCRUM_DEV) {
+            const scrumMastersCount = project.members.filter(
+                (m: any) => m.role === ProjectRole.SCRUM_MASTER || m.role === ProjectRole.SCRUM_DEV
+            ).length;
+
+            if (scrumMastersCount <= 1) {
+                throw new AppError('Cannot remove the only Scrum Master/Scrum Dev. Assign another member to this role first.', 400, 'ValidationError');
+            }
         }
 
         const result = await db().collection('projects').updateOne(
@@ -377,13 +508,13 @@ export async function removeProjectMember(projectId: string, userId: string) {
         );
 
         if (result.matchedCount === 0) {
-            throw new Error('Project not found');
+            throw new AppError('Project not found', 404, 'NotFoundError');
         }
 
         revalidatePath('/dashboard');
         return result;
     } catch (error) {
-        throw new Error(`Failed to remove member: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return createErrorResponse(error);
     }
 }
 
@@ -471,6 +602,133 @@ export async function becomeProductOwner(projectId: string, userId: string) {
     } catch (error) {
         console.error(error);
         return { error: "Internal Server Error" };
+    }
+}
+
+// Define types for bulk operation
+type TeamMemberOperation = {
+    userId: string;
+    operation: 'add' | 'remove' | 'update';
+    role?: ProjectRole;
+};
+
+// Process multiple team member operations in a single transaction
+export async function updateProjectTeamBulk(
+    projectId: string, 
+    operations: TeamMemberOperation[]
+): Promise<any | ErrorResponse> {
+    try {
+        if (!projectId) throw new AppError('Project ID is required', 400, 'ValidationError');
+        if (!operations || operations.length === 0) {
+            return { success: true, message: 'No changes to apply' };
+        }
+
+        const { db } = await connectToDatabase();
+        
+        // Get the current project state
+        const project = await db().collection('projects').findOne({
+            _id: new ObjectId(projectId)
+        });
+
+        if (!project) {
+            throw new AppError('Project not found', 404, 'NotFoundError');
+        }
+
+        // Create a working copy of the members array to simulate the changes
+        let updatedMembers = [...project.members];
+
+        // Process all operations in the working copy
+        for (const op of operations) {
+            switch (op.operation) {
+                case 'add':
+                    // Check if user is already a member
+                    if (updatedMembers.some(m => m.userId === op.userId)) {
+                        throw new AppError(`User ${op.userId} is already a member of this project`, 400, 'ValidationError');
+                    }
+                    
+                    if (!op.role) {
+                        throw new AppError('Role is required for add operation', 400, 'ValidationError');
+                    }
+                    
+                    // Add the member
+                    updatedMembers.push({
+                        userId: op.userId,
+                        role: op.role,
+                        joinedAt: new Date()
+                    });
+                    break;
+                
+                case 'remove':
+                    // Remove the member
+                    updatedMembers = updatedMembers.filter(m => m.userId !== op.userId);
+                    break;
+                
+                case 'update':
+                    // Update the member's role
+                    if (!op.role) {
+                        throw new AppError('Role is required for update operation', 400, 'ValidationError');
+                    }
+                    
+                    const memberIndex = updatedMembers.findIndex(m => m.userId === op.userId);
+                    if (memberIndex === -1) {
+                        throw new AppError(`User ${op.userId} is not a member of this project`, 404, 'NotFoundError');
+                    }
+                    
+                    updatedMembers[memberIndex] = {
+                        ...updatedMembers[memberIndex],
+                        role: op.role
+                    };
+                    break;
+                
+                default:
+                    throw new AppError(`Invalid operation: ${op.operation}`, 400, 'ValidationError');
+            }
+        }
+
+        // Validate the final state
+        // 1. Project must have at least one member
+        if (updatedMembers.length === 0) {
+            throw new AppError('Project must have at least one member', 400, 'ValidationError');
+        }
+        
+        // 2. Project must have exactly one Product Owner
+        const productOwnerCount = updatedMembers.filter(m => m.role === ProjectRole.PRODUCT_OWNER).length;
+        if (productOwnerCount !== 1) {
+            throw new AppError(`Project must have exactly one Product Owner. Found ${productOwnerCount}`, 400, 'ValidationError');
+        }
+        
+        // 3. Project must have at least one Scrum Master or Scrum Dev
+        const scrumMasterCount = updatedMembers.filter(m => 
+            m.role === ProjectRole.SCRUM_MASTER || m.role === ProjectRole.SCRUM_DEV
+        ).length;
+        if (scrumMasterCount === 0) {
+            throw new AppError('Project must have at least one Scrum Master or Scrum Dev', 400, 'ValidationError');
+        } else if (scrumMasterCount > 1) {
+            throw new AppError('Project can have at most one Scrum Master or Scrum Dev', 400, 'ValidationError');
+        }
+        
+        // 4. Project must have at least one Developer (or Scrum Dev)
+        const developerCount = updatedMembers.filter(m => 
+            m.role === ProjectRole.DEVELOPER || m.role === ProjectRole.SCRUM_DEV
+        ).length;
+        if (developerCount === 0) {
+            throw new AppError('Project must have at least one Developer', 400, 'ValidationError');
+        }
+
+        // All validations passed, update the project
+        const result = await db().collection('projects').updateOne(
+            { _id: new ObjectId(projectId) },
+            { $set: { members: updatedMembers } }
+        );
+
+        if (result.matchedCount === 0) {
+            throw new AppError('Project not found', 404, 'NotFoundError');
+        }
+
+        revalidatePath('/dashboard');
+        return { success: true, message: 'Team updated successfully' };
+    } catch (error) {
+        return createErrorResponse(error);
     }
 }
 

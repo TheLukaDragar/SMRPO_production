@@ -129,6 +129,29 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
     try {
       const formData = new FormData(e.currentTarget)
 
+      // Validate team composition
+      const hasProductOwner = selectedUsers.some(user => user.role === ProjectRole.PRODUCT_OWNER);
+      const scrumMasterCount = selectedUsers.filter(user => 
+        user.role === ProjectRole.SCRUM_MASTER || user.role === ProjectRole.SCRUM_DEV
+      ).length;
+      const hasDeveloper = selectedUsers.some(user => 
+        user.role === ProjectRole.DEVELOPER || user.role === ProjectRole.SCRUM_DEV
+      );
+
+      if (!hasProductOwner) {
+        throw new Error("Team must have a Product Owner");
+      }
+      
+      if (scrumMasterCount === 0) {
+        throw new Error("Team must have a Scrum Master");
+      } else if (scrumMasterCount > 1) {
+        throw new Error("Team can have at most one Scrum Master or Scrum Dev");
+      }
+      
+      if (!hasDeveloper) {
+        throw new Error("Team must have a Developer");
+      }
+
       // Add selected users to form data
       selectedUsers.forEach((selectedUser, index) => {
         formData.append(`members[${index}][userId]`, selectedUser.user._id)
@@ -170,11 +193,30 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
 
   const handleSelectUser = (user: User) => {
     if (!selectedUsers.some(selected => selected.user._id === user._id)) {
-      // If no PRODUCT_OWNER exists yet, set this user as PRODUCT_OWNER
+      // Determine appropriate role based on team composition
+      let defaultRole = ProjectRole.DEVELOPER;
+
+      // Check existing team composition
       const hasProductOwner = selectedUsers.some(selected => selected.role === ProjectRole.PRODUCT_OWNER);
+      const hasScrumMaster = selectedUsers.some(selected => 
+        selected.role === ProjectRole.SCRUM_MASTER || selected.role === ProjectRole.SCRUM_DEV
+      );
+      const hasDeveloper = selectedUsers.some(selected => 
+        selected.role === ProjectRole.DEVELOPER || selected.role === ProjectRole.SCRUM_DEV
+      );
+
+      // Assign roles based on what the team needs
+      if (!hasProductOwner) {
+        defaultRole = ProjectRole.PRODUCT_OWNER;
+      } else if (!hasScrumMaster) {
+        defaultRole = ProjectRole.SCRUM_MASTER;
+      } else if (!hasDeveloper) {
+        defaultRole = ProjectRole.DEVELOPER;
+      }
+
       setSelectedUsers([...selectedUsers, {
         user,
-        role: hasProductOwner ? ProjectRole.DEVELOPER : ProjectRole.PRODUCT_OWNER
+        role: defaultRole
       }]);
     }
     setUserPopoverOpen(false)
@@ -186,8 +228,10 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
   }
 
   const handleRoleChange = (userId: string, role: ProjectRole) => {
-    // If changing from PRODUCT_OWNER, ensure there's another PRODUCT_OWNER
+    // Current user and their role
     const currentUser = selectedUsers.find(selected => selected.user._id === userId);
+    
+    // If changing from PRODUCT_OWNER, ensure there's another PRODUCT_OWNER
     if (currentUser?.role === ProjectRole.PRODUCT_OWNER && role !== ProjectRole.PRODUCT_OWNER) {
       const otherProductOwner = selectedUsers.some(
         selected => selected.user._id !== userId && selected.role === ProjectRole.PRODUCT_OWNER
@@ -197,6 +241,25 @@ export function ProjectFormDialog({ open: externalOpen, onOpenChange: externalOn
           variant: "destructive",
           title: "Error",
           description: "Project must have exactly one Product Owner. Please assign another Product Owner first."
+        });
+        return;
+      }
+    }
+
+    // If changing to SCRUM_MASTER or SCRUM_DEV, check if there's already someone in that role
+    if ((role === ProjectRole.SCRUM_MASTER || role === ProjectRole.SCRUM_DEV) && 
+        currentUser?.role !== ProjectRole.SCRUM_MASTER && 
+        currentUser?.role !== ProjectRole.SCRUM_DEV) {
+      const hasScrumMasterRole = selectedUsers.some(
+        selected => selected.user._id !== userId && 
+                   (selected.role === ProjectRole.SCRUM_MASTER || selected.role === ProjectRole.SCRUM_DEV)
+      );
+      
+      if (hasScrumMasterRole) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Project can have at most one Scrum Master or Scrum Dev."
         });
         return;
       }

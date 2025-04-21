@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { Project } from '@/lib/types/project-types'
-import { getProjects, getProjectById } from '@/lib/actions/project-actions'
+import { getProjects, getProjectById, getMyProjects } from '@/lib/actions/project-actions'
 
 interface ProjectContextType {
   activeProject: Project | null
@@ -24,7 +24,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProjects = useCallback(async () => {
     try {
-      const response = await getProjects()
+      const response = await getMyProjects()
       if ('error' in response) {
         setError(response.error.message)
       } else {
@@ -38,7 +38,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [activeProject])
+  }, [])
 
   const refreshActiveProject = async () => {
     if (activeProject?._id) {
