@@ -32,6 +32,7 @@ export default function DNDPage() {
     const [isSprintModalOpen, setIsSprintModalOpen] = useState(false);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+    const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
     const params = useParams();
 
     const projectId = params.projectId as string;
@@ -62,10 +63,12 @@ export default function DNDPage() {
         try {
             setIsRefetching(true);
             setIsLoadingUsers(true);
+            setIsUserRoleLoading(true);
             if (!projectId) {
                 console.log("No project ID");
                 setIsLoadingUsers(false);
                 setIsRefetching(false);
+                setIsUserRoleLoading(false);
                 return;
             }
             const users = await getProjectMembers(projectId);
@@ -96,6 +99,7 @@ export default function DNDPage() {
             console.error("Error fetching project users:", error);
         } finally {
             setIsRefetching(false);
+            setIsUserRoleLoading(false);
         }
     }, [projectId, user, fetchUserData]);
 
@@ -211,88 +215,79 @@ export default function DNDPage() {
 
     return (
         <div>
-            <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="p-6 bg-gray-100 min-h-screen">
-                    <div className="flex justify-between items-center mb-6">
-                        <h1 className="text-2xl font-bold text-gray-800">Project Planning Board</h1>
-                        {userRole === 'SCRUM_MASTER' || userRole === 'SCRUM_DEV' && (
-                            <button
-                                onClick={() => setIsSprintModalOpen(true)}
-                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                            >
-                                Add Sprint
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Loading State */}
-                    {isLoadingUsers && renderLoading()}
-
-                    {/* Content when data is loaded */}
-                    {!isLoadingUsers && (
-                        <>
-                            {/* Product Backlog Section */}
-                            <div className="mb-8">
-                                <h2 className="text-xl font-semibold mb-4">Product Backlog</h2>
-                                <BacklogTable
-                                    droppableId={`${projectId}-backlog`}
-                                    key={`${projectId}-backlog`}
-                                    title={"Product Backlog"}
-                                    items={stories.filter(story => story.SprintPosition === "backlog" && story.sprintID === projectId)}
-                                    projectUsers={projectUsers}
-                                    setItems={setStories}
-                                    userRole={userRole || undefined}
-                                />
-
-                            </div>
-
-                            {/* Sprint Boards Section */}
-                            <div className="mt-10">
-                                <h2 className="text-xl font-semibold mb-4">Sprint Boards</h2>
-                                {columns.length > 0 ? (
-                                    <div className="flex space-x-8 overflow-x-auto pb-6">
-                                        {columns.map((sprint) => (
-                                            <div key={sprint._id} className="flex-none min-w-max">
-                                                <div className="mb-4 bg-white p-3 rounded-lg shadow-sm">
-                                                    <h3 className="font-bold text-lg">{sprint.sprintName}</h3>
-                                                    {sprint.startDate && sprint.endDate && (
-                                                        <span className="text-sm text-gray-600 block mt-1">
-                                                            {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
-                                                        </span>
-                                                    )}
-                                                    {sprint.velocity && (
-                                                        <span className="mt-2 inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                                                            Velocity: {sprint.velocity}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex space-x-6 overflow-x-auto">
-                                                    {sprint.sprintParts && sprint.sprintParts.map((part) => (
-                                                        <BacklogTable
-                                                            droppableId={`${sprint._id}-${part}`}
-                                                            key={part}
-                                                            title={part}
-                                                            items={stories.filter(story => story.SprintPosition === part && story.sprintID === sprint._id)}
-                                                            projectUsers={projectUsers}
-                                                            setItems={setStories}
-                                                            userRole={userRole || ""}
-                                                        />
-                                                    ))}
-                                                </div>
+            {(isUserRoleLoading || isLoadingUsers) ? renderLoading() : (
+                <DragDropContext onDragEnd={handleDragEnd}>
+                    <div className="p-6 bg-gray-100 min-h-screen">
+                        <div className="flex justify-between items-center mb-6">
+                            <h1 className="text-2xl font-bold text-gray-800">Project Planning Board</h1>
+                            {(userRole === 'SCRUM_MASTER' || userRole === 'SCRUM_DEV') && (
+                                <button
+                                    onClick={() => setIsSprintModalOpen(true)}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                >
+                                    Add Sprint
+                                </button>
+                            )}
+                        </div>
+                        {/* Content when data is loaded */}
+                        {/* Product Backlog Section */}
+                        <div className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">Product Backlog</h2>
+                            <BacklogTable
+                                droppableId={`${projectId}-backlog`}
+                                key={`${projectId}-backlog`}
+                                title={"Product Backlog"}
+                                items={stories.filter(story => story.SprintPosition === "backlog" && story.sprintID === projectId)}
+                                projectUsers={projectUsers}
+                                setItems={setStories}
+                                userRole={userRole || undefined}
+                            />
+                        </div>
+                        {/* Sprint Boards Section */}
+                        <div className="mt-10">
+                            <h2 className="text-xl font-semibold mb-4">Sprint Boards</h2>
+                            {columns.length > 0 ? (
+                                <div className="flex space-x-8 overflow-x-auto pb-6">
+                                    {columns.map((sprint) => (
+                                        <div key={sprint._id} className="flex-none min-w-max">
+                                            <div className="mb-4 bg-white p-3 rounded-lg shadow-sm">
+                                                <h3 className="font-bold text-lg">{sprint.sprintName}</h3>
+                                                {sprint.startDate && sprint.endDate && (
+                                                    <span className="text-sm text-gray-600 block mt-1">
+                                                        {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
+                                                    </span>
+                                                )}
+                                                {sprint.velocity && (
+                                                    <span className="mt-2 inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                                                        Velocity: {sprint.velocity}
+                                                    </span>
+                                                )}
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="bg-white p-8 rounded-lg text-center">
-                                        <p className="text-gray-600">No active sprints found. {(userRole === 'SCRUM_MASTER' || userRole === 'SCRUM_DEV') ? 'Add a sprint to get started.' : 'Contact your Scrum Master to create a sprint.'}</p>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </div>
-            </DragDropContext>
-
+                                            <div className="flex space-x-6 overflow-x-auto">
+                                                {sprint.sprintParts && sprint.sprintParts.map((part) => (
+                                                    <BacklogTable
+                                                        droppableId={`${sprint._id}-${part}`}
+                                                        key={part}
+                                                        title={part}
+                                                        items={stories.filter(story => story.SprintPosition === part && story.sprintID === sprint._id)}
+                                                        projectUsers={projectUsers}
+                                                        setItems={setStories}
+                                                        userRole={userRole || ""}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="bg-white p-8 rounded-lg text-center">
+                                    <p className="text-gray-600">No active sprints found. {(userRole === 'SCRUM_MASTER' || userRole === 'SCRUM_DEV') ? 'Add a sprint to get started.' : 'Contact your Scrum Master to create a sprint.'}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </DragDropContext>
+            )}
             <AddSprintModal
                 isOpen={isSprintModalOpen}
                 onClose={() => setIsSprintModalOpen(false)}
