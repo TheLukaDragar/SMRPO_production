@@ -73,12 +73,12 @@ export default function ProjectSettings() {
     const canEditProject = user?.role === 'Administrator' || 
         activeProject?.members?.some(m => 
             m.userId === user?._id && 
-            (m.role === ProjectRole.SCRUM_MASTER || m.role === ProjectRole.PRODUCT_OWNER)
+            (m.role === ProjectRole.SCRUM_MASTER || m.role === ProjectRole.PRODUCT_OWNER || m.role === ProjectRole.SCRUM_DEV)
         );
     
     const canManageTeam = user?.role === 'Administrator' || 
         activeProject?.members?.some(m => 
-            m.userId === user?._id && m.role === ProjectRole.SCRUM_MASTER
+            m.userId === user?._id && (m.role === ProjectRole.SCRUM_MASTER || m.role === ProjectRole.SCRUM_DEV)
         );
 
     // Update form data when project data changes
@@ -458,6 +458,8 @@ export default function ProjectSettings() {
             case ProjectRole.PRODUCT_OWNER:
                 return 'default';
             case ProjectRole.SCRUM_MASTER:
+                return 'secondary';
+            case ProjectRole.SCRUM_DEV:
                 return 'secondary';
             case ProjectRole.DEVELOPER:
                 return 'outline';

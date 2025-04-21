@@ -215,7 +215,7 @@ export default function DNDPage() {
                 <div className="p-6 bg-gray-100 min-h-screen">
                     <div className="flex justify-between items-center mb-6">
                         <h1 className="text-2xl font-bold text-gray-800">Project Planning Board</h1>
-                        {userRole === 'SCRUM_MASTER' && (
+                        {userRole === 'SCRUM_MASTER' || userRole === 'SCRUM_DEV' && (
                             <button
                                 onClick={() => setIsSprintModalOpen(true)}
                                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
@@ -284,7 +284,7 @@ export default function DNDPage() {
                                     </div>
                                 ) : (
                                     <div className="bg-white p-8 rounded-lg text-center">
-                                        <p className="text-gray-600">No active sprints found. {userRole === 'SCRUM_MASTER' ? 'Add a sprint to get started.' : 'Contact your Scrum Master to create a sprint.'}</p>
+                                        <p className="text-gray-600">No active sprints found. {(userRole === 'SCRUM_MASTER' || userRole === 'SCRUM_DEV') ? 'Add a sprint to get started.' : 'Contact your Scrum Master to create a sprint.'}</p>
                                     </div>
                                 )}
                             </div>
