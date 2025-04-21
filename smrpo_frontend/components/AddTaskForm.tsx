@@ -27,7 +27,8 @@ export function AddTaskForm({ userStoryId, team, isDeveloper, isScrumMaster, spr
         AssignedTo: undefined,
         timeLogged: 0,
         timeEstimate: 1,
-        dueDate: new Date()
+        dueDate: new Date(),
+        timeLogHistory: [] // Initialize with empty array
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string>("");
@@ -114,7 +115,8 @@ export function AddTaskForm({ userStoryId, team, isDeveloper, isScrumMaster, spr
             AssignedTo: undefined,
             timeLogged: 0,
             timeEstimate: 1,
-            dueDate: new Date()
+            dueDate: new Date(),
+            timeLogHistory: [] // Initialize with empty array
         });
         setError("");
     };
@@ -139,7 +141,8 @@ export function AddTaskForm({ userStoryId, team, isDeveloper, isScrumMaster, spr
                 AssignedTo: newTask.AssignedTo,
                 timeLogged: 0,
                 timeEstimate: newTask.timeEstimate!,
-                startLog: null
+                startLog: null,
+                timeLogHistory: [] // Initialize with empty array for new tasks
             };
 
             const result = await addTask(taskToAdd);
