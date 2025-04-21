@@ -3,19 +3,25 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useProject } from '@/lib/contexts/project-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { updateProject, removeProjectMember, updateProjectMemberRole } from '@/lib/actions/project-actions';
+import { 
+    updateProject, 
+    removeProjectMember, 
+    updateProjectMemberRole, 
+    addProjectMember,
+    updateProjectTeamBulk
+} from '@/lib/actions/project-actions';
 import { getUsers } from '@/lib/actions/user-actions';
 import { useToast } from '@/components/ui/use-toast';
-import { ProjectRole } from '@/lib/types/project-types';
+import { ProjectRole, ProjectMember } from '@/lib/types/project-types';
 import { User } from '@/lib/types/user-types';
 import { useUser } from '@/lib/hooks/useUser';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, AlertCircle, Loader2, UserPlus, X, Edit, Check, ChevronDown } from 'lucide-react';
+import { Save, AlertCircle, Loader2, UserPlus, X, Edit, Check, ChevronDown, Undo, UserMinus, InfoIcon } from 'lucide-react';
 import { AddTeamMemberDialog } from '@/components/add-team-member-dialog';
 import {
   Select,
@@ -30,6 +36,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from '@/components/ui/button';
+
+// Define type for team member changes
+type MemberChange = {
+    userId: string;
+    type: 'add' | 'remove' | 'update';
+    role?: ProjectRole;
+    originalRole?: ProjectRole;
+};
 
 export default function ProjectSettings() {
     const params = useParams();
@@ -45,13 +60,14 @@ export default function ProjectSettings() {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // Team Settings state
+    // Team Settings state with new state for tracking changes
     const [users, setUsers] = useState<User[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRefetching, setIsRefetching] = useState(false);
     const [editingUserId, setEditingUserId] = useState<string | null>(null);
-    const [isUpdatingRole, setIsUpdatingRole] = useState(false);
-    const [selectedRole, setSelectedRole] = useState<ProjectRole | null>(null);
+    const [memberChanges, setMemberChanges] = useState<MemberChange[]>([]);
+    const [isSavingTeam, setIsSavingTeam] = useState(false);
+    const [pendingMembers, setPendingMembers] = useState<{userId: string, role: ProjectRole}[]>([]);
     
     // Check permissions
     const canEditProject = user?.role === 'Administrator' || 
@@ -173,77 +189,268 @@ export default function ProjectSettings() {
         }
     };
 
-    const handleStartEditRole = (userId: string, currentRole: ProjectRole) => {
-        setEditingUserId(userId);
-        setSelectedRole(currentRole);
-    };
-
-    const handleCancelEditRole = () => {
-        setEditingUserId(null);
-        setSelectedRole(null);
-    };
-
-    const handleUpdateRole = async (userId: string) => {
-        if (!selectedRole) return;
+    // New function to handle member role change
+    const handleRoleChange = (userId: string, role: ProjectRole) => {
+        // Find the member
+        const member = activeProject?.members?.find(m => m.userId === userId);
+        if (!member) return;
         
-        // Check if trying to change the last Product Owner
-        if (activeProject?.members) {
-            const currentMember = activeProject.members.find(m => m.userId === userId);
-            const productOwners = activeProject.members.filter(m => m.role === ProjectRole.PRODUCT_OWNER);
-            
-            if (currentMember?.role === ProjectRole.PRODUCT_OWNER && selectedRole !== ProjectRole.PRODUCT_OWNER && productOwners.length <= 1) {
-                toast({
-                    variant: "destructive",
-                    title: "Error",
-                    description: "Cannot change the last Product Owner. Please assign another Product Owner first."
+        // Check existing changes for this user
+        const existingChangeIndex = memberChanges.findIndex(
+            change => change.userId === userId && change.type === 'update'
+        );
+        
+        if (existingChangeIndex >= 0) {
+            // If the role is the same as original, remove the change
+            if (memberChanges[existingChangeIndex].originalRole === role) {
+                setMemberChanges(prev => prev.filter((_, i) => i !== existingChangeIndex));
+            } else {
+                // Update existing change
+                setMemberChanges(prev => {
+                    const updated = [...prev];
+                    updated[existingChangeIndex] = { ...updated[existingChangeIndex], role };
+                    return updated;
                 });
-                handleCancelEditRole();
+            }
+        } else {
+            // Add new change
+            setMemberChanges(prev => [
+                ...prev,
+                {
+                    userId,
+                    type: 'update',
+                    role,
+                    originalRole: member.role
+                }
+            ]);
+        }
+        
+        // Close the role editing UI
+        setEditingUserId(null);
+    };
+    
+    // Function to mark member for removal
+    const handleMarkForRemoval = (userId: string) => {
+        // Find if this user has any pending changes
+        const existingChangeIndex = memberChanges.findIndex(change => change.userId === userId);
+        
+        if (existingChangeIndex >= 0) {
+            // If it's a new member being added, just remove them from changes
+            if (memberChanges[existingChangeIndex].type === 'add') {
+                setMemberChanges(prev => prev.filter((_, i) => i !== existingChangeIndex));
+                setPendingMembers(prev => prev.filter(m => m.userId !== userId));
                 return;
             }
             
-            // If changing to Product Owner, we need to check and handle the current Product Owner
-            if (selectedRole === ProjectRole.PRODUCT_OWNER) {
-                // First, update any existing Product Owner to a Developer role
-                for (const member of productOwners) {
-                    if (member.userId !== userId) {
-                        try {
-                            setIsUpdatingRole(true);
-                            await updateProjectMemberRole(projectId, member.userId, ProjectRole.DEVELOPER);
-                        } catch (error) {
+            // Otherwise update the change to 'remove'
+            setMemberChanges(prev => {
+                const updated = [...prev];
+                updated[existingChangeIndex] = { 
+                    userId, 
+                    type: 'remove',
+                    originalRole: memberChanges[existingChangeIndex].originalRole 
+                };
+                return updated;
+            });
+        } else {
+            // Add new remove change
+            const member = activeProject?.members?.find(m => m.userId === userId);
+            if (!member) return;
+            
+            setMemberChanges(prev => [
+                ...prev,
+                {
+                    userId,
+                    type: 'remove',
+                    originalRole: member.role
+                }
+            ]);
+        }
+    };
+    
+    // Function to undo changes for a member
+    const handleUndoChange = (userId: string) => {
+        setMemberChanges(prev => prev.filter(change => change.userId !== userId));
+        
+        // Also remove from pending members if applicable
+        setPendingMembers(prev => prev.filter(m => m.userId !== userId));
+        
+        // If currently editing this user, cancel editing
+        if (editingUserId === userId) {
+            setEditingUserId(null);
+        }
+    };
+    
+    // Function to handle adding a team member
+    const handleAddTeamMember = (userId: string, role: ProjectRole) => {
+        // Check if user is already a team member or pending
+        const isExistingMember = activeProject?.members?.some(m => m.userId === userId);
+        const isPendingMember = pendingMembers.some(m => m.userId === userId);
+        
+        if (isExistingMember || isPendingMember) {
                             toast({
                                 variant: "destructive",
                                 title: "Error",
-                                description: "Failed to update previous Product Owner's role"
+                description: "This user is already a team member"
                             });
-                            handleCancelEditRole();
-                            setIsUpdatingRole(false);
                             return;
                         }
-                    }
-                }
+        
+        // Add to pending members
+        setPendingMembers(prev => [...prev, { userId, role }]);
+        
+        // Add to changes
+        setMemberChanges(prev => [
+            ...prev,
+            {
+                userId,
+                type: 'add',
+                role
             }
+        ]);
+        
+        setIsModalOpen(false);
+    };
+    
+    // Function to save all changes
+    const handleSaveTeamChanges = async () => {
+        if (memberChanges.length === 0) return;
+
+        // First do a client-side validation of the final state
+        try {
+            // Get current team members with changes applied
+            const currentMembers = [...(activeProject?.members || [])];
+            const updatedMembers = currentMembers.filter(member => 
+                !memberChanges.some(change => change.type === 'remove' && change.userId === member.userId)
+            );
+
+            // Apply updates
+            memberChanges.filter(change => change.type === 'update').forEach(change => {
+                const index = updatedMembers.findIndex(m => m.userId === change.userId);
+                if (index !== -1 && change.role) {
+                    updatedMembers[index] = { ...updatedMembers[index], role: change.role };
+                }
+            });
+
+            // Add new members
+            memberChanges.filter(change => change.type === 'add').forEach(change => {
+                if (change.role) {
+                    updatedMembers.push({
+                        userId: change.userId,
+                        role: change.role,
+                        joinedAt: new Date()
+                    });
+                }
+            });
+
+            // Validate final state
+            const productOwnerCount = updatedMembers.filter(m => m.role === ProjectRole.PRODUCT_OWNER).length;
+            const scrumMasterCount = updatedMembers.filter(m => 
+                m.role === ProjectRole.SCRUM_MASTER || m.role === ProjectRole.SCRUM_DEV
+            ).length;
+            const developerCount = updatedMembers.filter(m => 
+                m.role === ProjectRole.DEVELOPER || m.role === ProjectRole.SCRUM_DEV
+            ).length;
+
+            if (productOwnerCount !== 1) {
+                throw new Error(`Project must have exactly one Product Owner. Found ${productOwnerCount}.`);
+            }
+
+            if (scrumMasterCount === 0) {
+                throw new Error('Project must have at least one Scrum Master or Scrum Dev.');
+            } else if (scrumMasterCount > 1) {
+                throw new Error('Project can have at most one Scrum Master or Scrum Dev.');
+            }
+
+            if (developerCount === 0) {
+                throw new Error('Project must have at least one Developer.');
+            }
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Validation Error",
+                description: error instanceof Error ? error.message : "Invalid team composition"
+            });
+            return;
         }
         
+        setIsSavingTeam(true);
+        
         try {
-            setIsUpdatingRole(true);
-            await updateProjectMemberRole(projectId, userId, selectedRole);
-            toast({
-                variant: "success",
-                title: "Success",
-                description: "Team member role updated successfully",
+            // Convert our changes to the format expected by the bulk update function
+            const operations = memberChanges.map(change => {
+                switch (change.type) {
+                    case 'add':
+                        return {
+                            userId: change.userId,
+                            operation: 'add' as const,
+                            role: change.role
+                        };
+                    case 'remove':
+                        return {
+                            userId: change.userId,
+                            operation: 'remove' as const
+                        };
+                    case 'update':
+                        return {
+                            userId: change.userId,
+                            operation: 'update' as const,
+                            role: change.role
+                        };
+                    default:
+                        throw new Error(`Unknown change type: ${change.type}`);
+                }
             });
-            refreshProject();
+
+            // Call the bulk update function
+            const result = await updateProjectTeamBulk(projectId, operations);
+            
+            if ('error' in result) {
+                toast({
+                    variant: "destructive",
+                    title: "Team Update Failed",
+                    description: result.error.message
+                });
+            } else {
+                toast({
+                    variant: "success",
+                    title: "Success",
+                    description: `Team updated successfully with ${operations.length} changes.`
+                });
+                
+                // Clear all changes
+                setMemberChanges([]);
+                setPendingMembers([]);
+                
+                // Refresh project data
+                refreshProject();
+            }
         } catch (error) {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: error instanceof Error ? error.message : "Failed to update team member role",
+                description: error instanceof Error ? error.message : "Failed to save team changes"
             });
         } finally {
-            setIsUpdatingRole(false);
-            setEditingUserId(null);
-            setSelectedRole(null);
+            setIsSavingTeam(false);
         }
+    };
+    
+    // Function to get effective role (considering pending changes)
+    const getEffectiveRole = (userId: string, currentRole: ProjectRole): ProjectRole | null => {
+        const change = memberChanges.find(c => c.userId === userId);
+        
+        if (!change) return currentRole;
+        
+        if (change.type === 'remove') return null; // Will be removed
+        if (change.type === 'update' && change.role) return change.role;
+        
+        return currentRole;
+    };
+    
+    // Function to check if a member has pending changes
+    const hasChanges = (userId: string): boolean => {
+        return memberChanges.some(change => change.userId === userId);
     };
 
     function getRoleBadgeVariant(role: ProjectRole) {
@@ -257,6 +464,19 @@ export default function ProjectSettings() {
             default:
                 return 'outline';
         }
+    }
+    
+    // New function to get badge style based on member status
+    function getMemberBadgeStyle(userId: string) {
+        const change = memberChanges.find(c => c.userId === userId);
+        
+        if (!change) return "";
+        
+        if (change.type === 'remove') return "opacity-50 line-through";
+        if (change.type === 'add') return "border-green-500 border";
+        if (change.type === 'update') return "border-yellow-500 border";
+        
+        return "";
     }
     
     return (
@@ -355,15 +575,12 @@ export default function ProjectSettings() {
                             )}
                         </CardTitle>
                         
-                        <div className="relative group">
+                        <div className="flex items-center gap-2 relative group">
                             <AddTeamMemberDialog
                                 projectId={projectId}
                                 open={isModalOpen}
                                 onOpenChange={setIsModalOpen}
-                                onSuccess={() => {
-                                    refreshProject();
-                                    fetchUsers();
-                                }}
+                                onAddMember={handleAddTeamMember}
                                 trigger={
                                     <motion.button
                                         whileHover={{ scale: canManageTeam ? 1.02 : 1 }}
@@ -393,12 +610,36 @@ export default function ProjectSettings() {
                             )}
                         </div>
                     </CardHeader>
+                    
+                    {/* Role constraints information panel */}
+                    <div className="px-6 py-3 border-t border-b bg-blue-50/50 flex gap-2 items-start">
+                        <InfoIcon className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-muted-foreground">
+                            <p className="font-medium text-foreground mb-1">Team Role Requirements:</p>
+                            <ul className="list-disc pl-5 space-y-1">
+                                <li>Project must have exactly one Product Owner</li>
+                                <li>Project must have at least one Scrum Master (or Scrum Dev)</li>
+                                <li>Project must have at least one Developer</li>
+                                <li>Project can have at most one Scrum Master or Scrum Dev</li>
+                                <li>A Scrum Dev counts as both a Scrum Master and a Developer</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
                     <CardContent>
                         <AnimatePresence>
                             <div className="space-y-4">
+                                {/* Existing team members */}
                                 {activeProject?.members?.map((member, index) => {
                                     const memberUser = users.find(u => u._id === member.userId);
                                     const isEditing = editingUserId === member.userId;
+                                    const effectiveRole = getEffectiveRole(member.userId, member.role);
+                                    const isPendingRemoval = memberChanges.some(
+                                        c => c.userId === member.userId && c.type === 'remove'
+                                    );
+                                    
+                                    // Skip rendering if member is being removed
+                                    if (isPendingRemoval && !canManageTeam) return null;
                                     
                                     return (
                                         <motion.div
@@ -407,7 +648,7 @@ export default function ProjectSettings() {
                                             exit={{ opacity: 0, y: -20 }}
                                             transition={{ duration: 0.2, delay: index * 0.05 }}
                                             key={member.userId}
-                                            className="group flex items-center justify-between p-3 border rounded-md bg-card hover:bg-card/95 hover:shadow-sm transition-all duration-200"
+                                            className={`group flex items-center justify-between p-3 border rounded-md bg-card hover:bg-card/95 hover:shadow-sm transition-all duration-200 ${getMemberBadgeStyle(member.userId)}`}
                                         >
                                             <div className="space-y-1">
                                                 <div className="font-medium text-gray-900">
@@ -421,9 +662,8 @@ export default function ProjectSettings() {
                                                 {isEditing ? (
                                                     <div className="flex items-center gap-2">
                                                         <Select
-                                                            value={selectedRole || member.role}
-                                                            onValueChange={(value) => setSelectedRole(value as ProjectRole)}
-                                                            disabled={isUpdatingRole}
+                                                            defaultValue={effectiveRole || member.role}
+                                                            onValueChange={(value) => handleRoleChange(member.userId, value as ProjectRole)}
                                                         >
                                                             <SelectTrigger className="w-[180px]">
                                                                 <SelectValue placeholder="Select role" />
@@ -440,23 +680,8 @@ export default function ProjectSettings() {
                                                         <motion.button
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
-                                                            className="p-2 rounded-md bg-green-50/50 text-green-600 hover:bg-green-100/80"
-                                                            onClick={() => handleUpdateRole(member.userId)}
-                                                            disabled={isUpdatingRole}
-                                                        >
-                                                            {isUpdatingRole ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                            ) : (
-                                                                <Check className="h-4 w-4" />
-                                                            )}
-                                                        </motion.button>
-                                                        
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
                                                             className="p-2 rounded-md bg-muted text-muted-foreground hover:bg-muted/80"
-                                                            onClick={handleCancelEditRole}
-                                                            disabled={isUpdatingRole}
+                                                            onClick={() => setEditingUserId(null)}
                                                         >
                                                             <X className="h-4 w-4" />
                                                         </motion.button>
@@ -464,42 +689,47 @@ export default function ProjectSettings() {
                                                 ) : (
                                                     <>
                                                         <Badge 
-                                                            variant={getRoleBadgeVariant(member.role)}
-                                                            className="px-3 py-1 text-xs font-medium rounded-full"
+                                                            variant={getRoleBadgeVariant(effectiveRole || member.role)}
+                                                            className={`px-3 py-1 text-xs font-medium rounded-full ${isPendingRemoval ? 'line-through opacity-50' : ''}`}
                                                         >
-                                                            {member.role}
+                                                            {effectiveRole || member.role}
                                                         </Badge>
                                                         
                                                         {canManageTeam && (
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
+                                                            <div className="flex items-center gap-2">
+                                                                {hasChanges(member.userId) ? (
                                                                     <motion.button
                                                                         whileHover={{ scale: 1.05 }}
                                                                         whileTap={{ scale: 0.95 }}
-                                                                        className="opacity-0 group-hover:opacity-100 p-2 rounded-md hover:bg-muted transition-opacity duration-200"
+                                                                        className="p-2 rounded-md bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
+                                                                        onClick={() => handleUndoChange(member.userId)}
                                                                     >
-                                                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                                        <Undo className="h-4 w-4" />
                                                                     </motion.button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem 
-                                                                        className="flex items-center gap-2 cursor-pointer"
-                                                                        onClick={() => handleStartEditRole(member.userId, member.role)}
-                                                                    >
-                                                                        <Edit className="h-4 w-4" />
-                                                                        Edit Role
-                                                                    </DropdownMenuItem>
-                                                                    {member.userId !== user?._id && (
-                                                                        <DropdownMenuItem 
-                                                                            className="flex items-center gap-2 text-red-600 cursor-pointer"
-                                                                            onClick={() => handleRemoveMember(member.userId)}
+                                                                ) : (
+                                                                    <>
+                                                                        <motion.button
+                                                                            whileHover={{ scale: 1.05 }}
+                                                                            whileTap={{ scale: 0.95 }}
+                                                                            className="p-2 rounded-md hover:bg-muted"
+                                                                            onClick={() => setEditingUserId(member.userId)}
                                                                         >
-                                                                            <X className="h-4 w-4" />
-                                                                            Remove Member
-                                                                        </DropdownMenuItem>
-                                                                    )}
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
+                                                                            <Edit className="h-4 w-4 text-muted-foreground" />
+                                                                        </motion.button>
+                                                                        
+                                                                        {member.userId !== user?._id && (
+                                                                            <motion.button
+                                                                                whileHover={{ scale: 1.05 }}
+                                                                                whileTap={{ scale: 0.95 }}
+                                                                                className="p-2 rounded-md hover:bg-red-100 text-red-500"
+                                                                                onClick={() => handleMarkForRemoval(member.userId)}
+                                                                            >
+                                                                                <UserMinus className="h-4 w-4" />
+                                                                            </motion.button>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </>
                                                 )}
@@ -507,7 +737,52 @@ export default function ProjectSettings() {
                                         </motion.div>
                                     );
                                 })}
-                                {(!activeProject?.members || activeProject.members.length === 0) && (
+                                
+                                {/* Pending new members */}
+                                {pendingMembers.map((member, index) => {
+                                    const memberUser = users.find(u => u._id === member.userId);
+                                    
+                                    return (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -20 }}
+                                            transition={{ duration: 0.2, delay: index * 0.05 }}
+                                            key={`pending-${member.userId}`}
+                                            className="group flex items-center justify-between p-3 border rounded-md bg-card hover:bg-card/95 hover:shadow-sm transition-all duration-200 border-green-500"
+                                        >
+                                            <div className="space-y-1">
+                                                <div className="font-medium text-gray-900">
+                                                    {memberUser ? `${memberUser.firstName} ${memberUser.lastName}` : member.userId}
+                                                    <span className="ml-2 text-xs text-green-600 font-medium">(New)</span>
+                                                </div>
+                                                <div className="text-sm text-gray-500 flex items-center gap-2">
+                                                    {memberUser?.email || 'Email not available'}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <Badge variant={getRoleBadgeVariant(member.role)} className="px-3 py-1 text-xs font-medium rounded-full">
+                                                    {member.role}
+                                                </Badge>
+                                                
+                                                {canManageTeam && (
+                                                    <div className="flex items-center gap-2">
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            className="p-2 rounded-md bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
+                                                            onClick={() => handleUndoChange(member.userId)}
+                                                        >
+                                                            <Undo className="h-4 w-4" />
+                                                        </motion.button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                                
+                                {(!activeProject?.members || activeProject.members.length === 0) && pendingMembers.length === 0 && (
                                     <motion.div
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
@@ -521,6 +796,41 @@ export default function ProjectSettings() {
                             </div>
                         </AnimatePresence>
                     </CardContent>
+                    
+                    {canManageTeam && memberChanges.length > 0 && (
+                        <CardFooter className="border-t flex justify-between items-center pt-4">
+                            <div className="text-sm text-muted-foreground">
+                                {memberChanges.length} pending changes
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        setMemberChanges([]);
+                                        setPendingMembers([]);
+                                        setEditingUserId(null);
+                                    }}
+                                    disabled={isSavingTeam}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    onClick={handleSaveTeamChanges}
+                                    disabled={isSavingTeam}
+                                    className="flex items-center gap-2"
+                                >
+                                    {isSavingTeam ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Save className="h-4 w-4" />
+                                    )}
+                                    {isSavingTeam ? "Saving..." : "Save Team Changes"}
+                                </Button>
+                            </div>
+                        </CardFooter>
+                    )}
                 </Card>
             </div>
             
