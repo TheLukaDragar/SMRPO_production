@@ -1,6 +1,6 @@
 import React from "react";
 import { User } from "@/lib/types/user-types";
-import { tasks } from "@/lib/types/tasks";
+import { tasks, TimeLogEntry } from "@/lib/types/tasks";
 import { useUser } from "@/lib/hooks/useUser";
 import { updateTask, deleteTask } from "@/lib/actions/user-story-actions";
 import {
@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar, Trash2, Play, StopCircle } from "lucide-react";
+import { Clock, Calendar, Trash2, Play, StopCircle, ChevronDown, ChevronUp, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
@@ -26,12 +26,16 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
     // For manual time logging
     const [manualDone, setManualDone] = React.useState("");
     const [manualToGo, setManualToGo] = React.useState("");
+    const [logDate, setLogDate] = React.useState(new Date().toISOString().split('T')[0]);
 
     // For timer-based time tracking
     const [isTracking, setIsTracking] = React.useState(false);
     const [elapsedTime, setElapsedTime] = React.useState(0);
     const [startTime, setStartTime] = React.useState<Date | null>(null);
     const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+    // For time log history display
+    const [showLogHistory, setShowLogHistory] = React.useState(false);
 
     // For optional input-based time logging (not used in this snippet, but left available)
     const [timeInput, setTimeInput] = React.useState("");
@@ -61,13 +65,35 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
             return;
         }
 
+        // Validate the log date
+        const selectedDate = new Date(logDate);
+        if (isNaN(selectedDate.getTime())) {
+            alert("Please enter a valid date");
+            return;
+        }
+
         try {
-            // Update the task’s timeLogged and timeEstimate
+            // Create a new time log entry
+            const newLogEntry = {
+                timeLogged: done,
+                timeEstimate: toGo,
+                logDate: logDate,
+                loggedBy: user._id
+            };
+
+            // Initialize or update the timeLogHistory array
+            const timeLogHistory = task.timeLogHistory ? [...task.timeLogHistory] : [];
+            timeLogHistory.push(newLogEntry);
+
+            // Update the task with the new log entry and update current values
             const updatedTask = {
                 ...task,
-                timeLogged: done,
-                timeEstimate: toGo
+                timeLogged: done, // Keep current value up to date for backward compatibility
+                timeEstimate: toGo,
+                lastLogDate: logDate, // Keep for backward compatibility
+                timeLogHistory: timeLogHistory
             };
+            
             await updateTask(updatedTask);
             onTaskUpdated(updatedTask);
 
@@ -107,7 +133,7 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
      * Stops the timer, calculates hours, and updates the task accordingly.
      */
     const stopTimeTracking = async () => {
-        if (!startTime) return;
+        if (!startTime || !user) return;
 
         if (timerRef.current) {
             clearInterval(timerRef.current);
@@ -122,10 +148,25 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
         try {
             const currentTime = task.timeLogged ? Number(task.timeLogged) : 0;
             const newTime = currentTime + roundedTimeSpent;
+            const todayDate = new Date().toISOString().split('T')[0];
+
+            // Create a new time log entry for the timer
+            const newLogEntry = {
+                timeLogged: roundedTimeSpent, // Just the time spent during this tracking session
+                timeEstimate: task.timeEstimate, // Keep current estimate
+                logDate: todayDate,
+                loggedBy: user._id
+            };
+
+            // Initialize or update the timeLogHistory array
+            const timeLogHistory = task.timeLogHistory ? [...task.timeLogHistory] : [];
+            timeLogHistory.push(newLogEntry);
 
             const updatedTask = {
                 ...task,
-                timeLogged: newTime
+                timeLogged: newTime, // Keep current total for backward compatibility
+                lastLogDate: todayDate, // Keep for backward compatibility
+                timeLogHistory: timeLogHistory
             };
 
             await updateTask(updatedTask);
@@ -314,6 +355,13 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                     </div>
                 </div>
 
+                {/* Last log date display if available */}
+                {task.lastLogDate && (
+                    <div className="mt-1 text-xs text-gray-500">
+                        Last time logged: {task.lastLogDate}
+                    </div>
+                )}
+
                 {/* Active timer display */}
                 {isTracking && (
                     <div className="mt-3 py-2 px-3 bg-blue-50 border border-blue-100 rounded-md flex items-center gap-2">
@@ -376,45 +424,90 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
             </div>
             
             {/* Manual logging spinboxes */}
-            <div className="mt-2 flex items-center gap-3">
+            <div className="mt-2 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-500">Hours Done</label>
+                        <Input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={manualDone}
+                            onChange={(e) => setManualDone(e.target.value)}
+                            className="w-16"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-500">Hours To Go</label>
+                        <Input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={manualToGo}
+                            onChange={(e) => setManualToGo(e.target.value)}
+                            className="w-16"
+                        />
+                    </div>
+                </div>
+                
                 <div className="flex flex-col">
-                    <label className="text-xs text-gray-500">Hours Done</label>
+                    <label className="text-xs text-gray-500">Log Date</label>
                     <Input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        value={manualDone}
-                        onChange={(e) => setManualDone(e.target.value)}
-                        className="w-16"
+                        type="date"
+                        value={logDate}
+                        onChange={(e) => setLogDate(e.target.value)}
+                        className="w-full"
                     />
                 </div>
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-500">Hours To Go</label>
-                    <Input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        value={manualToGo}
-                        onChange={(e) => setManualToGo(e.target.value)}
-                        className="w-16"
-                    />
-                </div>
-            </div>
 
-            {/* Log button in another line */}
-            <div className="mt-2">
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleManualTimeLog}
-                    className="bg-blue-100 text-blue-800 hover:bg-blue-200"
-                >
-                    Log
-                </Button>
+                {/* Log button in another line */}
+                <div className="mt-2">
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleManualTimeLog}
+                        className="bg-blue-100 text-blue-800 hover:bg-blue-200"
+                    >
+                        Log
+                    </Button>
+                </div>
             </div>
         </div>
-    )
-}
+    )}
+
+                {/* Time log history display */}
+                {task.timeLogHistory && task.timeLogHistory.length > 0 && (
+                    <div className="mt-4">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowLogHistory(!showLogHistory)}
+                            className="flex items-center gap-1"
+                        >
+                            <History className="h-4 w-4" />
+                            {showLogHistory ? "Hide Log History" : "Show Log History"}
+                            {showLogHistory ? (
+                                <ChevronUp className="h-4 w-4" />
+                            ) : (
+                                <ChevronDown className="h-4 w-4" />
+                            )}
+                        </Button>
+                        {showLogHistory && (
+                            <div className="mt-2 border-t border-gray-200 pt-2">
+                                {task.timeLogHistory.map((log, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex justify-between text-xs text-gray-600"
+                                    >
+                                        <div>{log.logDate}</div>
+                                        <div>{log.timeLogged}h logged</div>
+                                        <div>{log.timeEstimate}h estimated</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Right-side controls: Accept/TakeOver/Delete */}
                 <div className="flex gap-2 ml-auto">

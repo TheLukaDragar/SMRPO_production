@@ -1,5 +1,13 @@
 import {User} from "@/lib/types/user-types";
 
+// Define a type for individual time log entries
+export interface TimeLogEntry {
+    timeLogged: number;
+    timeEstimate: number;
+    logDate: string;
+    loggedBy: string; // User ID who logged the time
+}
+
 export interface tasks {
     _id: string;
     userStoryId: string;
@@ -10,7 +18,9 @@ export interface tasks {
     startLog: Date;
     timeLogged: number;
     dueDate: Date;
+    lastLogDate?: string; // For backward compatibility
     AssignedTo?: User;
+    timeLogHistory?: TimeLogEntry[]; // Array to store log history
 }
 
 export interface tasks_noId {
@@ -22,5 +32,7 @@ export interface tasks_noId {
     startLog: Date | null;
     timeLogged: number;
     dueDate: Date;
+    lastLogDate?: string; // For backward compatibility
     AssignedTo?: User;
+    timeLogHistory?: TimeLogEntry[]; // Array to store log history
 }

@@ -113,6 +113,8 @@ export async function updateTask(task: tasks) {
 
     const objectId = new ObjectId(_id);
 
+    // Store the date information from the frontend
+    // Make sure all task data is properly processed including lastLogDate
     const result = await db().collection('tasks').updateOne(
         { _id: objectId },
         { $set: taskToUpdate }
