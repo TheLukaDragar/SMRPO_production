@@ -154,7 +154,171 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                 </div>
             )}
 
-            {/* Modal remains unchanged */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-0  flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-gray-900">Add New User Story</h2>
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                            >
+                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {error && (
+                            <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
+                                {error}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit}>
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                                        Title
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="title"
+                                        name="title"
+                                        value={newUserStory.title}
+                                        onChange={handleInputChange}
+                                        className={`mt-1 block w-full border ${!newUserStory.title.trim() && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        placeholder="Enter story title"
+                                        required
+                                    />
+                                    {!newUserStory.title.trim() && error && (
+                                        <p className="mt-1 text-sm text-red-500">Title is required</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                                        Description
+                                    </label>
+                                    <textarea
+                                        id="description"
+                                        name="description"
+                                        value={newUserStory.description}
+                                        onChange={handleInputChange}
+                                        className={`mt-1 block w-full border ${!newUserStory.description.trim() && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        rows={3}
+                                        placeholder="Enter story description"
+                                        required
+                                    />
+                                    {!newUserStory.description.trim() && error && (
+                                        <p className="mt-1 text-sm text-red-500">Description is required</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label htmlFor="owner" className="block text-sm font-medium text-gray-700">
+                                        Owner
+                                    </label>
+                                    <select
+                                        id="owner"
+                                        name="owner"
+                                        value={newUserStory.owner?._id || ""}
+                                        onChange={(e) => {
+                                            const selectedUser = projectUsers.find(user => user._id === e.target.value);
+                                            setNewUserStory({ ...newUserStory, owner: selectedUser || {} as User });
+                                        }}
+                                        className={`mt-1 block w-full border ${!newUserStory.owner?._id && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        required
+                                    >
+                                        <option value="">Select an owner</option>
+                                        {projectUsers.map((user) => (
+                                            <option key={user._id} value={user._id}>
+                                                {user.userName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {!newUserStory.owner?._id && error && (
+                                        <p className="mt-1 text-sm text-red-500">Owner is required</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label htmlFor="priority" className="block text-sm font-medium text-gray-700">
+                                        Priority
+                                    </label>
+                                    <select
+                                        id="priority"
+                                        name="priority"
+                                        value={newUserStory.priority}
+                                        onChange={handleInputChange}
+                                        className={`mt-1 block w-full border ${!newUserStory.priority && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        required
+                                    >
+                                        <option value="">Select priority</option>
+                                        <option value="Wont Have">Wont Have</option>
+                                        <option value="Should Have">Should Have</option>
+                                        <option value="Must have">Must have</option>
+                                    </select>
+                                    {!newUserStory.priority && error && (
+                                        <p className="mt-1 text-sm text-red-500">Priority is required</p>
+                                    )}
+                                </div>
+                                {/* <div>
+                                    <label htmlFor="storyPoints" className="block text-sm font-medium text-gray-700">
+                                        Story Points (Time Estimate)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        id="storyPoints"
+                                        name="storyPoints"
+                                        value={newUserStory.storyPoints}
+                                        onChange={handleInputChange}
+                                        min="1"
+                                        list="storypoints-options"
+                                        className={`mt-1 block w-full border ${(!newUserStory.storyPoints || newUserStory.storyPoints <= 0) && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        required
+                                    />
+                                    {(!newUserStory.storyPoints || newUserStory.storyPoints <= 0) && error && (
+                                        <p className="mt-1 text-sm text-red-500">Story points must be greater than 0</p>
+                                    )}
+                                </div> */}
+                                <div>
+                                    <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">
+                                        Due Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        id="dueDate"
+                                        name="dueDate"
+                                        value={newUserStory.dueDate ? new Date(newUserStory.dueDate).toISOString().split('T')[0] : ''}
+                                        onChange={handleInputChange}
+                                        className={`mt-1 block w-full border ${!newUserStory.dueDate && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                                        required
+                                    />
+                                    {!newUserStory.dueDate && error && (
+                                        <p className="mt-1 text-sm text-red-500">Due date is required</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="mt-6 flex justify-end space-x-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+                                        }`}
+                                >
+                                    {isSubmitting ? 'Adding...' : 'Add User Story'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
