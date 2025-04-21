@@ -33,7 +33,7 @@ export default function DNDPage() {
     const [userRole, setUserRole] = useState<string | null>(null);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     const params = useParams();
-    
+
     const projectId = params.projectId as string;
     const { user } = useUser();
 
@@ -190,7 +190,7 @@ export default function DNDPage() {
                 projectId: projectId,
                 sprintName: name || `Sprint ${sprintNumber}`,
                 isActive: true,
-                sprintParts: ['Sprint Backlog', 'Development', 'Testing', 'Acceptance', 'Done', 'Rejected'],
+                sprintParts: ['Sprint Backlog', 'Development', 'Testing', 'Acceptance', 'Done'],
                 startDate: startDate,
                 endDate: endDate,
                 velocity: velocity
@@ -243,15 +243,6 @@ export default function DNDPage() {
                                     setItems={setStories}
                                     userRole={userRole || undefined}
                                 />
-                                <BacklogTable
-                                    droppableId={`${projectId}-Rejected`}
-                                    title="Rejected"
-                                    items={stories.filter(story => story.SprintPosition === "Rejected" && story.sprintID === projectId)}
-                                    projectUsers={projectUsers}
-                                    setItems={setStories}
-                                    userRole={userRole || undefined}
-                                />
-
 
                             </div>
 

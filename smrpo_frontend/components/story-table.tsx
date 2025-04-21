@@ -102,7 +102,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, title, items, project
                                         : editedStory.priority === 'Should have'
                                             ? 'bg-yellow-500 text-white'
                                             : 'bg-green-500 text-white'
-                                    }`}
+                                        }`}
                                 >
                                     {editedStory.priority}
                                 </span>
@@ -237,7 +237,6 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, title, items, project
                                         <option value="Sprint">Sprint</option>
                                         <option value="In Progress">In Progress</option>
                                         <option value="Done">Done</option>
-                                        <option value="Rejected">Rejected</option>
                                     </select>
                                 </div>
                             </div>

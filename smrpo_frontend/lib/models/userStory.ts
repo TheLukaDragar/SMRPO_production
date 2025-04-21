@@ -8,8 +8,8 @@ const UserStorySchema = new Schema({
     sprintID: { type: String },
     SprintPosition: { type: String },
     createdAt: { type: Date, default: Date.now },
-    owner: { type: Object }, // or use a User reference if preferred
-    comment: { type: String, default: "" }, // ✅ your single comment field
+    owner: { type: Object },
+    comment: { type: String, default: "" },
 });
 
 export const UserStory =

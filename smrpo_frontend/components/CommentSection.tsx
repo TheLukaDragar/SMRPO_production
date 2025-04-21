@@ -11,15 +11,17 @@ import { useUser } from "@/lib/hooks/useUser";
 export default function CommentSection({
     storyId,
     storyData,
+    userRole,
 }: {
     storyId: string;
     storyData: UserStory;
+    userRole: string;
 }) {
     const [text, setText] = useState("");
-    // Comments are taken from storyData.comments or empty array if undefined
     const [comments, setComments] = useState<CommentEntry[]>(storyData.comments || []);
     const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
     const [showAll, setShowAll] = useState(false);
+    const isProductOwner = userRole === "PRODUCT_OWNER";
     const { user } = useUser();
 
     const saveComment = async () => {
@@ -63,9 +65,11 @@ export default function CommentSection({
                 onChange={(e) => setText(e.target.value)}
                 className="mb-2"
             />
-            <Button onClick={saveComment} disabled={status === "saving"}>
-                {status === "saving" ? "Saving..." : "Submit Comment"}
-            </Button>
+            {!isProductOwner && (
+                <Button onClick={saveComment} disabled={status === "saving"}>
+                    {status === "saving" ? "Saving..." : "Submit Comment"}
+                </Button>
+            )}
 
             {status === "saved" && (
                 <p className="text-sm text-green-600 mt-2">Comment submitted.</p>

@@ -7,7 +7,7 @@ import { LoginForm } from "@/components/login-form"
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center h-full">
-      <p>Loading form...</p> 
+      <p>Loading form...</p>
     </div>
   );
 }
@@ -33,11 +33,11 @@ export default function LoginPage() {
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
-        <Image
+        {/*<Image
           src="/placeholder.svg"
           alt="Image"
           className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-        />
+        />*/}
       </div>
     </div>
   )
