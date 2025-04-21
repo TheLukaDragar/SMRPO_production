@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { LucideIcon } from "lucide-react"
+import Link from "next/link"
 
 import {
   Sidebar,
@@ -32,10 +33,10 @@ export function NavBoards({ boards }: NavBoardsProps) {
         {boards.map((board) => (
           <SidebarMenuItem key={board.name}>
             <SidebarMenuButton asChild>
-              <a href={board.url}>
+              <Link href={board.url}>
                 <board.icon className="size-4" />
                 <span>{board.name}</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         ))}

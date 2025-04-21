@@ -136,12 +136,12 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
       {
         name: "Sprint Board",
         //url: "/dashboard/boards/sprint",
-        url: projectId ? `/dashboard/project/${projectId}/sprintBoard` : "/dashboard/settings/sprintBoard",
+        url: projectId ? `/dashboard/project/${projectId}/sprintBoard` : "/dashboard",
         icon: Frame,
       },
       {
         name: "Archive Board",
-        url: projectId ? `/dashboard/project/${projectId}/archive` : "/dashboard/settings/archive",
+        url: projectId ? `/dashboard/project/${projectId}/archive` : "/dashboard",
         icon: PieChart,
       },
       // {
