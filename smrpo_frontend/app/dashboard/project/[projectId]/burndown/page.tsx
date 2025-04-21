@@ -24,11 +24,12 @@ Chart.register(
     Legend
 );
 
-import { getAllUserStories, getAllSprints } from "@/lib/actions/user-story-actions";
+import { getAllUserStories, getAllSprints, getTasks } from "@/lib/actions/user-story-actions";
 import { Line } from "react-chartjs-2";
 import { useParams } from "next/navigation";
 import { sprint } from "@/lib/types/sprint-types";
 import { UserStory } from "@/lib/types/user-story-types";
+import { tasks, TimeLogEntry } from "@/lib/types/tasks";
 
 export default function BurndownPage() {
   const [chartData, setChartData] = useState<any>(null);
@@ -64,10 +65,13 @@ export default function BurndownPage() {
           return;
         }
 
-        // Calculate total work remaining based on story points
-        const totalWorkRemaining = sprintStories.reduce(
-          (acc: number, story: UserStory) => acc + (story.storyPoints || 0),
-          0
+        // Get all tasks to access their time logging history
+        const allTasks = await getTasks();
+        
+        // Filter tasks that belong to our sprint stories
+        const storyIds = sprintStories.map((story: UserStory) => story._id);
+        const sprintTasks = allTasks.filter((task: tasks) => 
+          storyIds.includes(task.userStoryId)
         );
 
         // Generate dates for the sprint duration
@@ -78,39 +82,105 @@ export default function BurndownPage() {
         // Calculate number of days in sprint
         const sprintDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
         const daysElapsed = Math.max(0, Math.min(sprintDuration, Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))));
-        const daysRemaining = Math.max(0, sprintDuration - daysElapsed);
 
-        // Generate dates for x-axis
-        const dates = [];
-        const idealBurndown = [];
-        const actualBurndown = [];
+        // Generate all dates within the sprint for the x-axis
+        const dates: string[] = [];
+        const dateMap = new Map<string, number>(); // Map to track position of each date in the array
+        
+        // Create an array of all dates in the sprint and a lookup map
         const currentDate = new Date(startDate);
-
-        // Calculate ideal burndown (linear decrease from total to 0)
         for (let i = 0; i <= sprintDuration; i++) {
-          const dateStr = currentDate.toLocaleDateString();
+          const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD format
           dates.push(dateStr);
-          
-          // Ideal burndown line - work decreases linearly each day
-          const idealRemaining = totalWorkRemaining * (1 - (i / sprintDuration));
-          idealBurndown.push(idealRemaining);
-          
-          // For actual burndown, use the data up to current date
-          // For days in the past, calculate actual work logged
-          if (i <= daysElapsed) {
-            // For simplicity, let's use a basic calculation
-            // In a real app, you would get actual remaining work from task updates
-            const completedRatio = Math.min(1.0, (i / sprintDuration) * 1.2); // Slightly adjust to simulate real progress
-            const randomVariation = 0.9 + (Math.random() * 0.2); // Add slight randomization
-            actualBurndown.push(totalWorkRemaining * (1 - (completedRatio * randomVariation)));
-          }
-          
+          dateMap.set(dateStr, i);
           currentDate.setDate(currentDate.getDate() + 1);
         }
 
+        // Calculate ideal burndown (linear decrease from total to 0)
+        // Sum initial estimates from all tasks
+        const initialEstimate = sprintTasks.reduce(
+          (total: number, task: tasks) => total + (task.timeEstimate || 0), 0
+        );
+        
+        const idealBurndown = dates.map((_, index) => 
+          initialEstimate * (1 - (index / sprintDuration))
+        );
+
+        // For actual burndown, we need to process all time log entries chronologically
+        const timeLogsData: {
+          date: string;
+          hoursLogged: number;
+          remainingEstimate: number;
+        }[] = [];
+
+        // Process all tasks with time log history
+        sprintTasks.forEach((task: tasks) => {
+          // Use the timeLogHistory if available, otherwise use the legacy fields
+          if (task.timeLogHistory && task.timeLogHistory.length > 0) {
+            task.timeLogHistory.forEach((logEntry: TimeLogEntry) => {
+              timeLogsData.push({
+                date: logEntry.logDate,
+                hoursLogged: logEntry.timeLogged,
+                remainingEstimate: logEntry.timeEstimate
+              });
+            });
+          } else if (task.lastLogDate) {
+            // Handle legacy data without timeLogHistory
+            timeLogsData.push({
+              date: task.lastLogDate,
+              hoursLogged: task.timeLogged,
+              remainingEstimate: task.timeEstimate
+            });
+          }
+        });
+
+        // Sort time logs by date
+        timeLogsData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        // Initialize arrays for our actual data points
+        const hoursLoggedByDate = new Array(dates.length).fill(0);
+        const remainingEstimateByDate = new Array(dates.length).fill(initialEstimate);
+
+        // Process the time logs to build our data points
+        let cumulativeHoursLogged = 0;
+        let latestRemainingEstimate = initialEstimate;
+
+        timeLogsData.forEach(logEntry => {
+          const dateKey = logEntry.date.split('T')[0]; // Ensure we have YYYY-MM-DD format
+          const dateIndex = dateMap.get(dateKey);
+          
+          if (dateIndex !== undefined && dateIndex < dates.length) {
+            // Add this entry's hours to our cumulative total
+            cumulativeHoursLogged += logEntry.hoursLogged;
+            
+            // Update the remaining estimate
+            latestRemainingEstimate = logEntry.remainingEstimate;
+            
+            // Update our data arrays at this date index
+            hoursLoggedByDate[dateIndex] = cumulativeHoursLogged;
+            remainingEstimateByDate[dateIndex] = latestRemainingEstimate;
+            
+            // Also update all future dates to reflect this latest data
+            for (let i = dateIndex + 1; i < dates.length; i++) {
+              if (hoursLoggedByDate[i] < cumulativeHoursLogged) {
+                hoursLoggedByDate[i] = cumulativeHoursLogged;
+              }
+              if (remainingEstimateByDate[i] > latestRemainingEstimate) {
+                remainingEstimateByDate[i] = latestRemainingEstimate;
+              }
+            }
+          }
+        });
+
+        // Format dates for display
+        const formattedDates = dates.map(dateStr => {
+          const date = new Date(dateStr);
+          return date.toLocaleDateString();
+        });
+
         // Set chart data
         setChartData({
-          labels: dates,
+          labels: formattedDates,
           datasets: [
             {
               label: "Ideal Burndown",
@@ -122,8 +192,17 @@ export default function BurndownPage() {
               tension: 0.1,
             },
             {
-              label: "Actual Work Remaining",
-              data: actualBurndown,
+              label: "Hours Logged (Actual)",
+              data: hoursLoggedByDate,
+              borderColor: "green",
+              backgroundColor: "transparent",
+              borderWidth: 2,
+              pointRadius: 4,
+              tension: 0.1,
+            },
+            {
+              label: "Hours Remaining (Actual)",
+              data: remainingEstimateByDate,
               borderColor: "red",
               backgroundColor: "transparent",
               borderWidth: 2,
@@ -150,14 +229,14 @@ export default function BurndownPage() {
       y: {
         title: {
           display: true,
-          text: 'Hours of Work Remaining',
+          text: 'Hours of Work',
         },
         beginAtZero: true,
       },
       x: {
         title: {
           display: true,
-          text: 'Days in Sprint',
+          text: 'Sprint Timeline',
         }
       }
     },
