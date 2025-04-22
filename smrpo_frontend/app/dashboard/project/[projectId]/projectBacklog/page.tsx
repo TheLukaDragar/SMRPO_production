@@ -138,6 +138,8 @@ const ProductBacklog: React.FC = () => {
             toast({
                 title: "Napaka pri posodabljanju zgodbe.",
                 description: "Vprašajte svojega Scrum Masterja za dodatno vedenje.",
+                variant: "destructive",
+            });
         }
     }, [stories, canEditDeleteStory, checkDuplicateTitle]);
 

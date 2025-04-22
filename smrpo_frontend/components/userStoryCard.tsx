@@ -9,7 +9,20 @@ import { tasks } from "@/lib/types/tasks";
 import { User } from "@/lib/types/user-types";
 import { TaskCard } from "@/components/TaskCard";
 import { AddTaskForm } from "@/components/AddTaskForm";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { useParams } from "next/navigation";
+import { ProjectRole } from "@/lib/types/project-types";
+
+// shadcn components
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
     Collapsible,
     CollapsibleContent,
@@ -18,8 +31,6 @@ import {
 import TextAreaTests from "@/components/TextAreaTests";
 import CommentSection from "@/components/CommentSection";
 import { CommentEntry } from "@/lib/types/projectPosts-types";
-import { useParams } from "next/navigation";
-import { ProjectRole } from "@/lib/types/project-types";
 
 interface UserStoryCardProps {
     ID: string;
@@ -110,6 +121,13 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
         }));
     };
 
+    const handleSelectChange = (name: string, value: string) => {
+        setEditedStory(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
     const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setEditedStory(prev => ({
@@ -150,6 +168,42 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
         fetchTasks();
     };
 
+    const getPriorityBadgeVariant = (priority: string) => {
+        switch (priority) {
+            case 'Must have':
+                return 'destructive';
+            case 'Should Have':
+                return 'secondary';
+            default:
+                return 'secondary';
+        }
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'Done':
+                return 'text-green-600';
+            case 'In Progress':
+                return 'text-blue-600';
+            case 'Sprint':
+                return 'text-purple-600';
+            case 'Rejected':
+                return 'text-red-600';
+            default:
+                return 'text-gray-600';
+        }
+    };
+
+    const getValidationBadgeVariant = (message: string, isValid: boolean) => {
+        if (!isValid) {
+            if (message.includes("completed")) {
+                return "secondary";
+            }
+            return "destructive";
+        }
+        return "outline";
+    };
+
     return (
         <div>
             <Draggable
@@ -163,291 +217,310 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        className={`w-full max-w-md bg-white rounded-lg border ${!isValid ? 'border-red-300' : 'border-gray-200'} 
-                              shadow-md hover:shadow-lg transition-shadow duration-300 p-4 my-2
-                              ${snapshot.isDragging ? 'ring-2 ring-blue-500' : ''}
-                              ${!isValid ? 'opacity-75' : ''}`}
                         onDoubleClick={handleDoubleClick}
                     >
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-semibold text-gray-800">{storyData.title}</h3>
-                            {storyData.SprintPosition === "Acceptance" && isProductOwner && (
-                                <button
-                                    className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
-                                    onClick={() => setShowRejectModal(true)}
-                                >
-                                    Reject
-                                </button>
-                            )}
-                            <div className="flex items-center space-x-2">
-                                {!isValid && (
-                                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
-                                        {validationMessage}
-                                    </span>
-                                )}
-                                <span
-                                    className={`text-sm px-2 py-1 rounded-full ${storyData.priority === 'Must have'
-                                        ? 'bg-red-500 text-white'
-                                        : storyData.priority === 'Should Have'
-                                            ? 'bg-yellow-500 text-white'
-                                            : 'bg-green-500 text-white'
-                                        }`}
-                                >
-                                    {storyData.priority}
-                                </span>
-                            </div>
-                        </div>
-
-                        <p className="text-gray-600 mb-4">{storyData.description}</p>
-
-                        {storyData.rejectionComment && (
-                            <div className="mt-4 p-3 border-l-4 border-red-500 bg-red-100 text-red-800 rounded">
-                                <strong>Rejection Reason:</strong> {storyData.rejectionComment}
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-2 text-sm text-gray-500 mb-3">
-                            <p><strong>Owner:</strong> {storyData.owner?.userName || "Unassigned"}</p>
-                            <p className={!storyData.storyPoints ? "text-red-500" : ""}>
-                                <strong>Story Points:</strong> {storyData.storyPoints || (isProductOwner ? "Waiting for time estimate" : "Not estimated")}
-                            </p>
-                            <p><strong>Status:</strong> {storyData.SprintPosition}</p>
-                            <p className="col-span-2"><strong>Created:</strong> {new Date(storyData.createdAt).toLocaleDateString()}</p>
-                            <CommentSection
-                                storyId={draggableId}
-                                storyData={storyData}
-                                userRole={userRole}
-                            />
-                        </div>
-
-                        {storyTasks.length > 0 && (
-                            <Collapsible
-                                open={isTasksOpen}
-                                onOpenChange={setIsTasksOpen}
-                                className="mt-4 pt-4 border-t border-gray-200"
-                            >
-                                <div className="flex items-center justify-between mb-2">
-                                    <CollapsibleTrigger className="flex items-center gap-2 hover:text-blue-600">
-                                        <h4 className="font-semibold text-gray-700">Tasks ({storyTasks.length})</h4>
-                                        {isTasksOpen ? (
-                                            <ChevronUp className="h-4 w-4" />
-                                        ) : (
-                                            <ChevronDown className="h-4 w-4" />
+                        <Card className={`w-full max-w-md ${snapshot.isDragging ? 'ring-2 ring-primary' : ''} 
+                                     ${!isValid && !validationMessage.includes("completed") ? 'opacity-75 border-destructive' : ''} 
+                                     hover:shadow-md transition-all duration-200`}>
+                            <CardHeader className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-xl">{storyData.title}</CardTitle>
+                                    <div className="flex gap-2">
+                                        {!isValid && (
+                                            <Badge 
+                                                variant={getValidationBadgeVariant(validationMessage, isValid)}
+                                                className={`${validationMessage.includes("completed") ? "text-blue-500" : ""} 
+                                                          ${!validationMessage.includes("completed") ? "animate-pulse" : ""}`}
+                                            >
+                                                {validationMessage}
+                                            </Badge>
                                         )}
-                                    </CollapsibleTrigger>
+                                        <Badge variant={getPriorityBadgeVariant(storyData.priority)}>
+                                            {storyData.priority}
+                                        </Badge>
+                                    </div>
                                 </div>
-                                <CollapsibleContent className="space-y-3">
-                                    {storyTasks.map((task) => (
-                                        <TaskCard
-                                            key={task._id}
-                                            task={task}
-                                            isScrumMaster={isScrumMaster}
-                                            onTaskUpdated={(updatedTask) => {
-                                                setStoryTasks(prev =>
-                                                    prev.map(t => t._id === updatedTask._id ? updatedTask : t)
-                                                );
-                                            }}
-                                            onTaskDeleted={(taskId) => {
-                                                setStoryTasks(prev => prev.filter(t => t._id !== taskId));
-                                            }}
-                                        />
-                                    ))}
-                                </CollapsibleContent>
-                            </Collapsible>
-                        )}
+                                <CardDescription className="text-gray-600">{storyData.description}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {storyData.rejectionComment && (
+                                    <Alert variant="destructive" className="bg-destructive/5 text-destructive">
+                                        <AlertDescription>
+                                            <strong>Rejection Reason:</strong> {storyData.rejectionComment}
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <Label className="text-gray-500">Owner</Label>
+                                        <p className="font-medium mt-1">{storyData.owner?.userName || "Unassigned"}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-500">Story Points</Label>
+                                        <p className={`font-medium mt-1 ${!storyData.storyPoints ? "text-destructive" : ""}`}>
+                                            {storyData.storyPoints || (isProductOwner ? "Waiting for time estimate" : "Not estimated")}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-500">Status</Label>
+                                        <p className={`font-medium mt-1 ${getStatusColor(storyData.SprintPosition)}`}>
+                                            {storyData.SprintPosition}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-500">Created</Label>
+                                        <p className="font-medium mt-1">{new Date(storyData.createdAt).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+
+                                <CommentSection
+                                    storyId={draggableId}
+                                    storyData={storyData}
+                                    userRole={userRole}
+                                />
+
+                                {storyTasks.length > 0 && (
+                                    <Collapsible
+                                        open={isTasksOpen}
+                                        onOpenChange={setIsTasksOpen}
+                                        className="pt-4"
+                                    >
+                                        <CollapsibleTrigger asChild>
+                                            <Button 
+                                                variant="ghost" 
+                                                className="flex w-full items-center justify-between p-0 hover:bg-transparent hover:text-primary"
+                                            >
+                                                <span className="font-semibold">Tasks ({storyTasks.length})</span>
+                                                {isTasksOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                            </Button>
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent className="space-y-3 pt-2">
+                                            {storyTasks.map((task) => (
+                                                <TaskCard
+                                                    key={task._id}
+                                                    task={task}
+                                                    isScrumMaster={isScrumMaster}
+                                                    onTaskUpdated={(updatedTask) => {
+                                                        setStoryTasks(prev =>
+                                                            prev.map(t => t._id === updatedTask._id ? updatedTask : t)
+                                                        );
+                                                    }}
+                                                    onTaskDeleted={(taskId) => {
+                                                        setStoryTasks(prev => prev.filter(t => t._id !== taskId));
+                                                    }}
+                                                />
+                                            ))}
+                                        </CollapsibleContent>
+                                    </Collapsible>
+                                )}
+                            </CardContent>
+                            {storyData.SprintPosition === "Acceptance" && isProductOwner && (
+                                <CardFooter>
+                                    <Button 
+                                        variant="destructive" 
+                                        onClick={() => setShowRejectModal(true)}
+                                        className="w-full sm:w-auto"
+                                    >
+                                        Reject Story
+                                    </Button>
+                                </CardFooter>
+                            )}
+                        </Card>
                     </div>
                 )}
             </Draggable>
 
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-2xl font-bold">Edit User Story</h2>
-                            <button
-                                onClick={handleCloseModal}
-                                className="text-gray-500 hover:text-gray-700"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-semibold text-primary">Edit User Story</DialogTitle>
+                    </DialogHeader>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Title</label>
-                                <input
-                                    type="text"
+                    <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+                        <div className="space-y-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="title" className="text-gray-700">Title</Label>
+                                <Input
+                                    id="title"
                                     name="title"
                                     value={editedStory.title || ''}
                                     onChange={handleInputChange}
-                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     required
+                                    className="w-full"
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Description</label>
-                                <TextAreaTests input={editedStory} />
+                            <div className="grid gap-2">
+                                <Label htmlFor="description" className="text-gray-700">Description</Label>
+                                <Textarea
+                                    id="description"
+                                    name="description"
+                                    value={editedStory.description || ''}
+                                    onChange={handleInputChange}
+                                    placeholder="Enter story description..."
+                                    className="min-h-[120px] resize-vertical"
+                                />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Priority</label>
-                                    <select
-                                        name="priority"
-                                        value={editedStory.priority || ''}
-                                        onChange={handleInputChange}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="priority" className="text-gray-700">Priority</Label>
+                                    <Select 
+                                        name="priority" 
+                                        value={editedStory.priority || ''} 
+                                        onValueChange={(value) => handleSelectChange('priority', value)}
                                     >
-                                        <option value="Wont Have">Wont Have</option>
-                                        <option value="Should Have">Should Have</option>
-                                        <option value="Must have">Must have</option>
-                                    </select>
+                                        <SelectTrigger id="priority" className="w-full">
+                                            <SelectValue placeholder="Select priority" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Must have" className="text-destructive">Must Have</SelectItem>
+                                            <SelectItem value="Should Have" className="text-yellow-600">Should Have</SelectItem>
+                                            <SelectItem value="Wont Have" className="text-gray-600">Won't Have</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Story Points {isProductOwner ? "(Set by dev team)" : ""}</label>
-                                    <input
+                                <div className="grid gap-2">
+                                    <Label htmlFor="storyPoints" className="text-gray-700">
+                                        Story Points {isProductOwner && <span className="text-gray-400 text-sm">(Set by dev team)</span>}
+                                    </Label>
+                                    <Input
+                                        id="storyPoints"
                                         type="number"
                                         name="storyPoints"
                                         value={editedStory.storyPoints || ''}
                                         onChange={handleNumberChange}
                                         min="1"
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                         disabled={isProductOwner}
+                                        className={`w-full ${isProductOwner ? 'opacity-50' : ''}`}
                                     />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Sprint Position</label>
-                                    <select
-                                        name="SprintPosition"
-                                        value={editedStory.SprintPosition || ''}
-                                        onChange={handleInputChange}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="Backlog">Backlog</option>
-                                        <option value="Sprint">Sprint</option>
-                                        <option value="In Progress">In Progress</option>
-                                        <option value="Done">Done</option>
-                                        <option value="Rejected">Rejected</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end space-x-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={handleCloseModal}
-                                    className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            <div className="grid gap-2">
+                                <Label htmlFor="sprintPosition" className="text-gray-700">Sprint Position</Label>
+                                <Select 
+                                    name="SprintPosition" 
+                                    value={editedStory.SprintPosition || ''} 
+                                    onValueChange={(value) => handleSelectChange('SprintPosition', value)}
                                 >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                >
-                                    Save Changes
-                                </button>
+                                    <SelectTrigger id="sprintPosition" className="w-full">
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Backlog">Backlog</SelectItem>
+                                        <SelectItem value="Sprint" className="text-purple-600">Sprint</SelectItem>
+                                        <SelectItem value="In Progress" className="text-blue-600">In Progress</SelectItem>
+                                        <SelectItem value="Done" className="text-green-600">Done</SelectItem>
+                                        <SelectItem value="Rejected" className="text-destructive">Rejected</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
+                        </div>
 
-                            <div className="mt-6 pt-6 border-t border-gray-200">
-                                <h3 className="text-lg font-semibold mb-4">Tasks</h3>
-                                {storyTasks.length > 0 && (
-                                    <div className="mb-6 space-y-3">
-                                        <h4 className="text-md font-medium text-gray-700">Existing Tasks</h4>
-                                        {storyTasks.map((task) => (
-                                            <TaskCard
-                                                key={task._id}
-                                                task={task}
-                                                isScrumMaster={isScrumMaster}
-                                                onTaskUpdated={(updatedTask) => {
-                                                    setStoryTasks(prev =>
-                                                        prev.map(t => t._id === updatedTask._id ? updatedTask : t)
-                                                    );
-                                                }}
-                                                onTaskDeleted={(taskId) => {
-                                                    setStoryTasks(prev => prev.filter(t => t._id !== taskId));
-                                                }}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </form>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" className="bg-primary hover:bg-primary/90">
+                                Save Changes
+                            </Button>
+                        </DialogFooter>
+                    </form>
 
-                        { !isProductOwner && (
-                            <div className="mt-6 pt-6 border-t border-gray-200">
-                                <h3 className="text-lg font-semibold mb-4">Add New Task</h3>
-                                <div className="bg-gray-50 p-4 rounded border border-gray-200">
-                                    <AddTaskForm
-                                        userStoryId={draggableId}
-                                        team={team}
-                                        isDeveloper={isDeveloper}
+                    {storyTasks.length > 0 && (
+                        <div className="mt-8 pt-6 border-t">
+                            <h3 className="text-lg font-semibold mb-4 text-primary">Tasks</h3>
+                            <div className="space-y-4 bg-gray-50/50 rounded-lg p-4 border border-gray-100">
+                                {storyTasks.map((task) => (
+                                    <TaskCard
+                                        key={task._id}
+                                        task={task}
                                         isScrumMaster={isScrumMaster}
-                                        sprintPosition={storyData.SprintPosition}
-                                        onTaskAdded={handleTaskAdded}
+                                        onTaskUpdated={(updatedTask) => {
+                                            setStoryTasks(prev =>
+                                                prev.map(t => t._id === updatedTask._id ? updatedTask : t)
+                                            );
+                                        }}
+                                        onTaskDeleted={(taskId) => {
+                                            setStoryTasks(prev => prev.filter(t => t._id !== taskId));
+                                        }}
                                     />
-                                </div>
+                                ))}
                             </div>
-                        )}
-                    </div>
-                </div>
-            )}
+                        </div>
+                    )}
 
-            {showRejectModal && (
-                <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-                    <div className="bg-white p-6 rounded-md shadow-lg w-full max-w-md">
-                        <h2 className="text-lg font-semibold mb-4">Reason for Rejection</h2>
-                        <textarea
+                    {!isProductOwner && (
+                        <div className="mt-8 pt-6 border-t">
+                            <h3 className="text-lg font-semibold mb-4 text-primary">Add New Task</h3>
+                            <div className="bg-gray-50/50 p-6 rounded-lg border border-gray-100">
+                                <AddTaskForm
+                                    userStoryId={draggableId}
+                                    team={team}
+                                    isDeveloper={isDeveloper}
+                                    isScrumMaster={isScrumMaster}
+                                    sprintPosition={storyData.SprintPosition}
+                                    onTaskAdded={handleTaskAdded}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Reason for Rejection</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <Textarea
                             value={tempComment}
                             onChange={(e) => setTempComment(e.target.value)}
-                            className="w-full border rounded p-2 mb-4"
-                            rows={4}
-                            placeholder="Enter reason..."
+                            placeholder="Enter reason for rejecting this story..."
+                            className="min-h-[100px] resize-none"
                         />
-                        <div className="flex justify-end gap-2">
-                            <button
-                                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                                onClick={() => {
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setTempComment("");
+                                setShowRejectModal(false);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={async () => {
+                                const updated = {
+                                    ...storyData,
+                                    rejectionComment: tempComment,
+                                    SprintPosition: 'Sprint Backlog',
+                                };
+
+                                try {
+                                    await updateStory(updated);
+                                    setEditedStory(updated);
                                     setTempComment("");
                                     setShowRejectModal(false);
-                                }}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                                onClick={async () => {
-                                    const updated = {
-                                        ...storyData,
-                                        rejectionComment: tempComment,
-                                        SprintPosition: 'Sprint Backlog',
-                                    };
-
-                                    try {
-                                        await updateStory(updated);
-                                        setEditedStory(updated);
-                                        setTempComment("");
-                                        setShowRejectModal(false);
-                                        if (onStoryUpdated) {
-                                            onStoryUpdated(updated);
-                                        }
-                                    } catch (error) {
-                                        console.error("Failed to reject story:", error);
+                                    if (onStoryUpdated) {
+                                        onStoryUpdated(updated);
                                     }
-                                }}
-                            >
-                                Reject Story
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                                } catch (error) {
+                                    console.error("Failed to reject story:", error);
+                                }
+                            }}
+                        >
+                            Reject Story
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
