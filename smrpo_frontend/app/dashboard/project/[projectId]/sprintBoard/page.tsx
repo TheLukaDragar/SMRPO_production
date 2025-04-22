@@ -16,10 +16,11 @@ import { useProject } from "@/lib/contexts/project-context";
 import { getProjectMembers } from "@/lib/actions/project-actions";
 import { getUsersByIds } from "@/lib/actions/user-actions";
 import AddSprintModal from '@/components/AddSprintModal';
-import { useUser } from "@/lib/hooks/useUser";
+import { useUser } from "@/lib/hooks/useUser";  
 import BacklogTable from "@/components/backlog-table";
 import { use } from 'react';
 import { useParams } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function DNDPage() {
     const [isRefetching, setIsRefetching] = useState(false);
@@ -34,6 +35,7 @@ export default function DNDPage() {
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
     const params = useParams();
+    const [showHidden, setShowHidden] = useState(false);
 
     const projectId = params.projectId as string;
     const { user } = useUser();
@@ -232,11 +234,26 @@ export default function DNDPage() {
                         {/* Product Backlog Section */}
                         <div className="mb-8">
                             <h2 className="text-xl font-semibold mb-4">Product Backlog</h2>
+                            <div className="flex justify-end items-center mb-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowHidden((prev) => !prev)}
+                                    title="Show hidden (priority: Wont Have)"
+                                    className="p-1 rounded hover:bg-gray-100 focus:outline-none"
+                                    style={{ lineHeight: 0 }}
+                                >
+                                    {showHidden ? (
+                                        <Eye className="w-5 h-5 text-gray-500" />
+                                    ) : (
+                                        <EyeOff className="w-5 h-5 text-gray-400" />
+                                    )}
+                                </button>
+                            </div>
                             <BacklogTable
                                 droppableId={`${projectId}-backlog`}
                                 key={`${projectId}-backlog`}
                                 title={"Product Backlog"}
-                                items={stories.filter(story => story.SprintPosition === "backlog" && story.sprintID === projectId)}
+                                items={stories.filter(story => story.SprintPosition === "backlog" && story.sprintID === projectId && (showHidden || story.priority !== "Wont Have"))}
                                 projectUsers={projectUsers}
                                 setItems={setStories}
                                 userRole={userRole || undefined}

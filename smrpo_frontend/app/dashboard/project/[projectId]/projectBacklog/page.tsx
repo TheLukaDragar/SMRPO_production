@@ -9,7 +9,7 @@ import {useParams} from "next/navigation";
 import {getAllSprints, getAllUserStories, deleteStory, updateStory} from "@/lib/actions/user-story-actions";
 import {getProjectMembers} from "@/lib/actions/project-actions";
 import {getUsersByIds} from "@/lib/actions/user-actions";
-import { toast } from "react-hot-toast";
+import { useToast } from "@/components/ui/use-toast"
 
 const ProductBacklog: React.FC = () => {
     const [stories, setStories] = useState<UserStory[]>([]);
@@ -18,6 +18,7 @@ const ProductBacklog: React.FC = () => {
     const [userRole, setUserRole] = useState<string | null>(null);
     const params = useParams();
     const [expandedCategory, setExpandedCategory] = useState<string | null>("unrealized-unassigned");
+    const { toast } = useToast();
 
     const projectId = params.projectId as string;
     const { user } = useUser();
@@ -53,22 +54,38 @@ const ProductBacklog: React.FC = () => {
         const storyToDelete = stories.find(story => story._id === storyId);
 
         if (!storyToDelete) {
-            toast.error("Zgodba ne obstaja.");
+            toast({
+                title: "Zgodba ne obstaja.",
+                description: "Vprašajte svojega Scrum Masterja za dodatno vedenje.",
+                variant: "destructive",
+            });
             return;
         }
 
         if (!canEditDeleteStory(storyToDelete)) {
-            toast.error("Nimate dovoljenja za brisanje te zgodbe.");
+            toast({
+                title: "Nimate dovoljenja za brisanje te zgodbe.",
+                description: "Vprašajte svojega Scrum Masterja za dodatno vedenje.",
+                variant: "destructive",
+            });
             return;
         }
 
         try {
             await deleteStory(storyId);
             setStories(prevStories => prevStories.filter(story => story._id !== storyId));
-            toast.success("Zgodba uspešno izbrisana.");
+            toast({
+                title: "Zgodba uspešno izbrisana.",
+                description: "Vprašajte svojega Scrum Masterja za dodatno vedenje.",
+                variant: "success",
+            });
         } catch (error) {
             console.error("Error deleting story:", error);
-            toast.error("Napaka pri brisanju zgodbe.");
+            toast({
+                title: "Napaka pri brisanju zgodbe.",
+                description: "Vprašajte svojega Scrum Masterja za dodatno vedenje.",
+                variant: "destructive",
+            });
         }
     }, [stories, canEditDeleteStory]);
 
@@ -77,18 +94,30 @@ const ProductBacklog: React.FC = () => {
         const originalStory = stories.find(story => story._id === updatedStory._id);
 
         if (!originalStory) {
-            toast.error("Zgodba ne obstaja.");
+            toast({
+                title: "Zgodba ne obstaja.",
+                description: "Vprašajte svojega Scrum Masterja za dodatno vedenje.",
+                variant: "destructive",
+            });
             return;
         }
 
         if (!canEditDeleteStory(originalStory)) {
-            toast.error("Nimate dovoljenja za urejanje te zgodbe.");
+            toast({
+                title: "Nimate dovoljenja za urejanje te zgodbe.",
+                description: "Vprašajte svojega Scrum Masterja za dodatno vedenje.",
+                variant: "destructive",
+            });
             return;
         }
 
         // Check for duplicate title
         if (updatedStory.title !== originalStory.title && checkDuplicateTitle(updatedStory.title, updatedStory._id)) {
-            toast.error("Zgodba s tem naslovom že obstaja.");
+            toast({
+                title: "Zgodba s tem naslovom že obstaja.",
+                description: "Vprašajte svojega Scrum Masterja za dodatno vedenje.",
+                variant: "destructive",
+            });
             return;
         }
 
@@ -99,10 +128,16 @@ const ProductBacklog: React.FC = () => {
                     story._id === updatedStory._id ? updatedStory : story
                 )
             );
-            toast.success("Zgodba uspešno posodobljena.");
+            toast({
+                title: "Zgodba uspešno posodobljena.",
+                description: "Vprašajte svojega Scrum Masterja za dodatno vedenje.",
+                variant: "success",
+            });
         } catch (error) {
             console.error("Error updating story:", error);
-            toast.error("Napaka pri posodabljanju zgodbe.");
+            toast({
+                title: "Napaka pri posodabljanju zgodbe.",
+                description: "Vprašajte svojega Scrum Masterja za dodatno vedenje.",
         }
     }, [stories, canEditDeleteStory, checkDuplicateTitle]);
 
