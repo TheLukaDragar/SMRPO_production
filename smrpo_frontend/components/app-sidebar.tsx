@@ -49,6 +49,10 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
             url: "/dashboard",
           },
           {
+            title: "Project Backlog",
+            url: projectId ? `/dashboard/project/${projectId}/projectBacklog` : "/dashboard/projectBacklog",
+          },
+          {
             title: "Burndown",
             url: projectId ? `/dashboard/project/${projectId}/burndown` : "/dashboard/burndown",
           },
@@ -138,6 +142,11 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
         //url: "/dashboard/boards/sprint",
         url: projectId ? `/dashboard/project/${projectId}/sprintBoard` : "/dashboard",
         icon: Frame,
+      },
+      {
+        name: "Sprint Management",
+        url: projectId ? `/dashboard/project/${projectId}/sprintList` : "/dashboard",
+        icon: PieChart,
       },
       {
         name: "Archive Board",

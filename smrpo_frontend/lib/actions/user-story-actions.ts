@@ -25,6 +25,16 @@ export async function addStory(story: UserStoryNoId) {
         insertedId: result.insertedId.toString(),
     };
 }
+//delete Story
+export async function deleteStory(storyId: string) {
+    const { db } = await connectToDatabase();
+    const result = await db().collection('userStory').deleteOne({ _id: new ObjectId(storyId) });
+
+    return {
+        acknowledged: result.acknowledged,
+        deletedCount: result.deletedCount
+    };
+}
 
 export async function updateStory(story: UserStory) {
     const { db } = await connectToDatabase();
@@ -74,6 +84,17 @@ export async function updateSprint(SprintToUpdate: sprint) {
     return {
         acknowledged: result.acknowledged,
         modifiedCount: result.modifiedCount,
+    };
+}
+
+//delete Story
+export async function deleteSprint(sprintId: string) {
+    const { db } = await connectToDatabase();
+    const result = await db().collection('sprint').deleteOne({ _id: new ObjectId(sprintId) });
+
+    return {
+        acknowledged: result.acknowledged,
+        deletedCount: result.deletedCount
     };
 }
 

@@ -72,8 +72,6 @@ export default function DNDPage() {
                 return;
             }
             const users = await getProjectMembers(projectId);
-            console.log('Users JSON:', JSON.stringify(users));
-
             if (user && user._id) {
                 console.log("all u;", users)
                 console.log("curr u;", user)
@@ -213,6 +211,7 @@ export default function DNDPage() {
         }
     };
 
+    console.log("ROLE" + userRole);
     return (
         <div>
             {(isUserRoleLoading || isLoadingUsers) ? renderLoading() : (

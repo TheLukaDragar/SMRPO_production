@@ -3,24 +3,32 @@
 import React, {useEffect, useState} from "react";
 import {useUser} from "@/lib/hooks/useUser";
 import { formatDistanceToNow } from 'date-fns';
+import {useProject} from "@/lib/contexts/project-context";
 
 interface ProjectWallPostProps {
     author: string
     text: string
     lastChangeDate: Date
     postId?: string
+    userRole?: string
 }
 
-const ProjectWallPost: React.FC<ProjectWallPostProps> = ({author, text, lastChangeDate, postId}) => {
+const ProjectWallPost: React.FC<ProjectWallPostProps> = ({author, text, lastChangeDate, postId, userRole}) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedText, setEditedText] = useState(text);
     const { user } = useUser();
+    const { activeProject } = useProject();
+
 
     const formattedDate = lastChangeDate ?
         formatDistanceToNow(new Date(lastChangeDate), { addSuffix: true }) :
         'Unknown date';
 
     const isAuthor = user?.userName === author;
+
+    const activeUser = activeProject?.members.filter(member => member.userId == user?._id)[0]
+
+    const hasSpecialRole = activeUser?.role ==="SCRUM_MASTER" || activeUser?.role === "PRODUCT_OWNER";
 
     const handleEdit = () => {
         setIsEditing(true);
@@ -51,7 +59,7 @@ const ProjectWallPost: React.FC<ProjectWallPostProps> = ({author, text, lastChan
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md w-full mb-4">
+        <div className={`bg-white rounded-lg shadow-md w-full mb-4 ${hasSpecialRole ? 'border-2 border-red-500' : ''}`}>
             <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center">
@@ -59,6 +67,11 @@ const ProjectWallPost: React.FC<ProjectWallPostProps> = ({author, text, lastChan
                             {author ? author.charAt(0).toUpperCase() : "A"}
                         </div>
                         <span className="ml-2 font-medium">{author || "Anonymous"}</span>
+                        {hasSpecialRole && (
+                            <span className="ml-2 text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">
+                                {userRole}
+                            </span>
+                        )}
                     </div>
                     <span className="text-xs text-gray-500">{formattedDate}</span>
                 </div>
