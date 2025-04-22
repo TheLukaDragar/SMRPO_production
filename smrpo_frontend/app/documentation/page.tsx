@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Button } from "@/components/ui/button";
 
 export default function DocumentationPage() {
     const [markdown, setMarkdown] = useState<string>("Loading documentation...");
+    const router = useRouter();
 
     useEffect(() => {
         fetch("/api/get-documentation")
@@ -15,8 +18,17 @@ export default function DocumentationPage() {
             .catch(() => setMarkdown("Failed to load documentation."));
     }, []);
 
+    const handleBack = () => router.back();
+
     return (
-        <div className="container max-w-3xl mx-auto p-6">
+        <div className="container max-w-3xl mx-auto p-6 space-y-4">
+            {/* Top Back Button */}
+            <div className="flex justify-start">
+                <Button onClick={handleBack} variant="outline">
+                    ← Nazaj
+                </Button>
+            </div>
+
             <Card>
                 <CardHeader>
                     <CardTitle>Documentation</CardTitle>
@@ -40,6 +52,13 @@ export default function DocumentationPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Bottom Back Button */}
+            <div className="flex justify-start">
+                <Button onClick={handleBack} variant="outline">
+                    ← Nazaj
+                </Button>
+            </div>
         </div>
     );
 }

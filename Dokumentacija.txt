@@ -47,6 +47,17 @@ Ta dokument opisuje uporabo spletne aplikacije, ki temelji na metodi Kanban za u
    - Na nadzorni plošči kliknite tri pike v desnem zgornjem kotu projekta.
    - Kliknite "Become Project Owner".
 
+## 🔥 Burndown diagram
+1. **Ideal Burndown**:
+   - To je teoretična (idealna) linija, ki prikazuje, kako bi moralo delo "izgorevati", če bi ekipa delala povsem enakomerno vsak dan sprinta.
+2. **Hours Logged (Actual)**:
+   - To je dejansko število ur, ki jih je ekipa zabeležila (loggala) pri izvajanju nalog.
+   - Prikazuje, koliko časa so člani ekipe porabili za delo, ne glede na to, koliko dela še ostane
+3. **Hours remainging (Actual)**:
+   - To je dejanska ocena, koliko ur dela še preostane do zaključka nalog v sprintu.
+   - Ekipa to pogosto posodablja vsak dan na osnovi trenutnega razumevanja nalog.
+   - Ta linija je najpogosteje tista, ki se primerja z Ideal Burndown linijo, da se vidi, ali ekipa sledi načrtu.
+
 ## 📊 Sprint Board
 1. **Dodajanje zgodbe**:
    - Kliknite na "Sprint Board" v stranskem meniju na levi.
@@ -59,22 +70,37 @@ Ta dokument opisuje uporabo spletne aplikacije, ki temelji na metodi Kanban za u
    - Kliknite in držite zgodbo in jo izpustite na željenem mestu.
 
 3. **Odstranjevanje/urejanje zgodbe**:
-   - Trenutno ni na voljo :(
+   - Zgodbo se ureja za dvojnim klikom na zgodbo.
+   - Uredite parametre.
+   - Kliknite "Save Changes"
 
-4. **Dodajanje novega sprinta**:
+4. **Potrjevanje zgodbe**:
+   - Potrjene zgodbe so premaknjene v "Done" stolpec
+
+5. **Dodajanje novega sprinta**:
    - Kliknite na "Sprint Board" v stranskem meniju na levi.
    - Kliknite na "Add Sprint" v zgornjem desnem kotu.
    - Vnesite podatke sprinta.
    - Kliknite "Add Sprint".
 
-5. **Beleženje ur**:
+6. **Beleženje ur**:
    - Kliknite na "Sprint Board" v stranskem meniju na levi.
    - Podrsajte na dno strani do "Sprint Boards".
    - Kliknite na kartico vaše naloge.
    - Vnesite porabljen čas.
    - Kliknite "Log".
    - Kliknite "Save Changes".
-	
+
+7 **Vzdrževanje obstoječih Sprintov**:
+   - Sprinte lahko urejate/brišete v stranskem meniju "Sprint Management"
+
+8. **Zavračanje zgodb**:
+   - Kliknite na "Reject" v zgornjem desnem kotu zgodbe.
+   - Podrsajte na dno strani do "Sprint Boards".
+   - Kliknite na kartico vaše naloge.
+   - Vnesite porabljen čas.
+   - Kliknite "Log".
+   - Kliknite "Save Changes".
 
 ## 🔧 Projektne nastavitve
 1. **Dodajanje članov ekipe**:
@@ -112,6 +138,16 @@ Ta dokument opisuje uporabo spletne aplikacije, ki temelji na metodi Kanban za u
    - Kliknite na "Admin" in nato "User Management" v stranskem meniju na levi.
    - Pod članom, katerega želite urejati, kliknite "Delete User".
 
+## 🧱 Projektni zid
+1. **Objavljanje na projektnem zidu**:
+   - Na dnu strani vnesete besedilo objave.
+   - Kliknete "Post".
+
+2. **Komentiranje objav na projektnem zidu**:
+   - Pod objavo vnesete komentar.
+   - Kliknete "Submit Comment".
+
+
 ## 👥 Uporabniške vloge
 - **Administrator**: Admin: Ima vse pravice.
 - **Product owner**: Odgovorni lastnik naloge: Dodaja naloge, ureja vsebino, dodeljuje člane. Vedno mora biti točno en (1) "Product owner".
@@ -121,38 +157,6 @@ Ta dokument opisuje uporabo spletne aplikacije, ki temelji na metodi Kanban za u
 ### Kako pridem do nadzorne plošče (Dashboard)?
 - Kliknite na "Projects" in nato "Overview" v stranskem meniju na levi.
 
-### Ali lahko urejam projekte drugih uporabnikov?
-- Samo če imate vlogo administratorja.
-
-### Zakaj nimam treh pik v kotu projekta?
-- Nimate vloge administratorja. Obrnite se na administratorja
-
-### Zakaj ne dela Sprint Planning?
-- Trenutno je ta del še v razvoju. Do nadaljnega se obrnite na "Sprint Board" na dnu dotičnega menija.
-
-### Zakaj ne dela Backlog Board?
-- Trenutno je ta del še v razvoju. Do nadaljnega se obrnite na "Sprint Board" na dnu dotičnega menija.
-
-### Zakaj ne morem urejati zgodbe na Sprint Boardu?
-- Trenutno je ta del še v razvoju.
-
-### Zakaj ne morem izbirsati zgodbe na Sprint Boardu?
-- Trenutno je ta del še v razvoju.
-
 ### Kako dodam oceno časovne zahtevnosti?
 - Oceno časovne zahtevnosti podate ob ustvarjanju projekta ali naloge.
 - Oceno časovne zahtevnosti urejate v podatkih projekta ali naloge.
-
-### Zakaj ne morem prevzeti zgodbe na Sprint Boardu?
-- Trenutno je ta del še v razvoju.
-
-### Zakaj ne morem zapustiti zgodbe na Sprint Boardu?
-- Trenutno je ta del še v razvoju.
-
-## 📞 Podpora
-Za dodatno pomoč se obrnite na [podpora@example.com](mailto:podpora@example.com).
-
----
-
-📌 **Hitra povezava**: [Spletna Stran](https://www.example.com)
-
