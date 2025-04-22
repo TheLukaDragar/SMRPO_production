@@ -38,8 +38,8 @@ export default function SprintsManagementPage() {
     const handleEditSprint = (sprint: sprint) => {
         setEditingSprint({
             ...sprint,
-            startDate: sprint.startDate,
-            endDate: sprint.endDate
+            startDate: sprint.startDate ? new Date(sprint.startDate) : undefined,
+            endDate: sprint.endDate ? new Date(sprint.endDate) : undefined
         });
         setValidationErrors({});
     };
@@ -267,7 +267,7 @@ export default function SprintsManagementPage() {
                             <input
                                 type="date"
                                 name="startDate"
-                                value={editingSprint.startDate ? editingSprint.startDate.toISOString().split('T')[0] : ''}
+                                value={editingSprint.startDate ? new Date(editingSprint.startDate).toISOString().split('T')[0] : ''}
                                 onChange={handleSprintChange}
                                 className={`w-full p-2 border rounded ${validationErrors.startDate || validationErrors.date ? 'border-red-500' : 'border-gray-300'}`}
                             />
@@ -283,7 +283,7 @@ export default function SprintsManagementPage() {
                             <input
                                 type="date"
                                 name="endDate"
-                                value={editingSprint.endDate ? editingSprint.endDate.toISOString().split('T')[0] : ''}
+                                value={editingSprint.endDate ? new Date(editingSprint.endDate).toISOString().split('T')[0] : ''}
                                 onChange={handleSprintChange}
                                 className={`w-full p-2 border rounded ${validationErrors.endDate || validationErrors.date ? 'border-red-500' : 'border-gray-300'}`}
                             />
