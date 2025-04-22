@@ -1,4 +1,4 @@
-# 📌 Dokumentacija za uporabo spletne strani (Kanban metoda)
+# 📌 Dokumentacija za uporabo spletne strani
 
 ## 📖 Uvod
 Ta dokument opisuje uporabo spletne aplikacije, ki temelji na metodi Kanban za upravljanje nalog in projektov. Kanban omogoča vizualno sledenje nalogam ter optimizacijo delovnih tokov.
