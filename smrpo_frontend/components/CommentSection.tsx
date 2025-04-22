@@ -8,15 +8,19 @@ import { UserStory } from "@/lib/types/user-story-types";
 import { CommentEntry } from "@/lib/types/projectPosts-types";
 import { useUser } from "@/lib/hooks/useUser";
 
+interface CommentSectionProps {
+    storyId: string;
+    storyData: UserStory;
+    userRole: string;
+    onCommentUpdate?: (updatedStory: UserStory) => void;
+}
+
 export default function CommentSection({
     storyId,
     storyData,
     userRole,
-}: {
-    storyId: string;
-    storyData: UserStory;
-    userRole: string;
-}) {
+    onCommentUpdate
+}: CommentSectionProps) {
     const [text, setText] = useState("");
     const [comments, setComments] = useState<CommentEntry[]>(storyData.comments || []);
     const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -36,16 +40,22 @@ export default function CommentSection({
         };
 
         // Append the new comment to the existing ones
+        const updatedComments = [...comments, newComment];
         const updated = {
             ...storyData,
-            comments: [...comments, newComment],
+            comments: updatedComments,
         };
 
         try {
-            await updateStory(updated);
-            setComments(updated.comments);
-            setText("");
-            setStatus("saved");
+            const updatedStory = await updateStory(updated);
+            if (updatedStory) {
+                setComments(updatedStory.comments || []);
+                setText("");
+                setStatus("saved");
+                if (onCommentUpdate) {
+                    onCommentUpdate(updatedStory);
+                }
+            }
         } catch (err) {
             console.error("Error saving comment:", err);
             setStatus("error");

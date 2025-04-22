@@ -9,7 +9,7 @@ import { tasks } from "@/lib/types/tasks";
 import { User } from "@/lib/types/user-types";
 import { TaskCard } from "@/components/TaskCard";
 import { AddTaskForm } from "@/components/AddTaskForm";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp, X, MessageCircle, ListTodo } from "lucide-react";
 import { useParams } from "next/navigation";
 import { ProjectRole } from "@/lib/types/project-types";
 
@@ -59,7 +59,9 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectionComment, setRejectionComment] = useState<string | null>(null);
     const [tempComment, setTempComment] = useState("");
+    const [showComments, setShowComments] = useState(false);
     const params = useParams();
+    const [currentStoryData, setCurrentStoryData] = useState<UserStory>(storyData);
 
     const validateStory = useCallback(() => {
         let valid = true;
@@ -102,6 +104,10 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
 
     useEffect(() => {
         setEditedStory({ ...storyData });
+    }, [storyData]);
+
+    useEffect(() => {
+        setCurrentStoryData(storyData);
     }, [storyData]);
 
     const handleDoubleClick = () => {
@@ -204,6 +210,13 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
         return "outline";
     };
 
+    const handleCommentUpdate = (updatedStory: UserStory) => {
+        setCurrentStoryData(updatedStory);
+        if (onStoryUpdated) {
+            onStoryUpdated(updatedStory);
+        }
+    };
+
     return (
         <div>
             <Draggable
@@ -274,58 +287,120 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                     </div>
                                 </div>
 
-                                <CommentSection
-                                    storyId={draggableId}
-                                    storyData={storyData}
-                                    userRole={userRole}
-                                />
-
-                                {storyTasks.length > 0 && (
-                                    <Collapsible
-                                        open={isTasksOpen}
-                                        onOpenChange={setIsTasksOpen}
-                                        className="pt-4"
+                                {/* Action Buttons */}
+                                <div className="flex justify-end gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setIsTasksOpen(!isTasksOpen)}
+                                        className={`relative flex items-center gap-2 hover:bg-gray-100 
+                                            ${isTasksOpen ? 'bg-primary/10 hover:bg-primary/20 text-primary' : 'text-gray-600'}`}
                                     >
-                                        <CollapsibleTrigger asChild>
-                                            <Button 
-                                                variant="ghost" 
-                                                className="flex w-full items-center justify-between p-0 hover:bg-transparent hover:text-primary"
+                                        <ListTodo className="h-5 w-5" />
+                                        <span>Tasks</span>
+                                        {storyTasks.length > 0 && (
+                                            <Badge 
+                                                variant="secondary" 
+                                                className={`ml-1 h-5 min-w-[20px] flex items-center justify-center rounded-full px-1.5 text-xs font-medium
+                                                    ${isTasksOpen 
+                                                        ? 'bg-primary text-white' 
+                                                        : 'bg-gray-200 text-gray-700'}`}
                                             >
-                                                <span className="font-semibold">Tasks ({storyTasks.length})</span>
-                                                {isTasksOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                            </Button>
-                                        </CollapsibleTrigger>
-                                        <CollapsibleContent className="space-y-3 pt-2">
-                                            {storyTasks.map((task) => (
-                                                <TaskCard
-                                                    key={task._id}
-                                                    task={task}
-                                                    isScrumMaster={isScrumMaster}
-                                                    onTaskUpdated={(updatedTask) => {
-                                                        setStoryTasks(prev =>
-                                                            prev.map(t => t._id === updatedTask._id ? updatedTask : t)
-                                                        );
-                                                    }}
-                                                    onTaskDeleted={(taskId) => {
-                                                        setStoryTasks(prev => prev.filter(t => t._id !== taskId));
-                                                    }}
-                                                />
-                                            ))}
-                                        </CollapsibleContent>
-                                    </Collapsible>
+                                                {storyTasks.length}
+                                            </Badge>
+                                        )}
+                                    </Button>
+
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowComments(!showComments)}
+                                        className={`relative flex items-center gap-2 hover:bg-gray-100 
+                                            ${showComments ? 'bg-primary/10 hover:bg-primary/20 text-primary' : 'text-gray-600'}`}
+                                    >
+                                        <MessageCircle className="h-5 w-5" />
+                                        <span>Comments</span>
+                                        {(currentStoryData.comments?.length ?? 0) > 0 && (
+                                            <Badge 
+                                                variant="secondary" 
+                                                className={`ml-1 h-5 min-w-[20px] flex items-center justify-center rounded-full px-1.5 text-xs font-medium
+                                                    ${showComments 
+                                                        ? 'bg-primary text-white' 
+                                                        : 'bg-gray-200 text-gray-700'}`}
+                                            >
+                                                {currentStoryData.comments?.length ?? 0}
+                                            </Badge>
+                                        )}
+                                    </Button>
+                                </div>
+
+                                {showComments && (
+                                    <CommentSection
+                                        storyId={draggableId}
+                                        storyData={currentStoryData}
+                                        userRole={userRole}
+                                        onCommentUpdate={handleCommentUpdate}
+                                    />
+                                )}
+
+                                {storyTasks.length > 0 && isTasksOpen && (
+                                    <div className="space-y-3 pt-2">
+                                        {storyTasks.map((task) => (
+                                            <TaskCard
+                                                key={task._id}
+                                                task={task}
+                                                isScrumMaster={isScrumMaster}
+                                                onTaskUpdated={(updatedTask) => {
+                                                    setStoryTasks(prev =>
+                                                        prev.map(t => t._id === updatedTask._id ? updatedTask : t)
+                                                    );
+                                                }}
+                                                onTaskDeleted={(taskId) => {
+                                                    setStoryTasks(prev => prev.filter(t => t._id !== taskId));
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
                                 )}
                             </CardContent>
-                            {storyData.SprintPosition === "Acceptance" && isProductOwner && (
-                                <CardFooter>
-                                    <Button 
-                                        variant="destructive" 
-                                        onClick={() => setShowRejectModal(true)}
-                                        className="w-full sm:w-auto"
-                                    >
-                                        Reject Story
-                                    </Button>
-                                </CardFooter>
-                            )}
+                            <CardFooter className="flex justify-between items-center">
+                                <div className="flex-1">
+                                    {storyData.SprintPosition === "Acceptance" && isProductOwner && (
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                onClick={async () => {
+                                                    const updated = {
+                                                        ...storyData,
+                                                        SprintPosition: 'Done',
+                                                        rejectionComment: "",
+                                                    };
+                                                    try {
+                                                        const updatedStoryData = await updateStory(updated);
+                                                        if (updatedStoryData && onStoryUpdated) {
+                                                            onStoryUpdated(updatedStoryData);
+                                                        } else if (updatedStoryData === null) {
+                                                            console.error("Failed to accept story, backend returned null.");
+                                                        }
+                                                    } catch (error) {
+                                                        console.error("Failed to accept story:", error);
+                                                    }
+                                                }}
+                                                className="text-green-600 border-green-600 hover:bg-green-100 hover:text-green-700"
+                                            >
+                                                Accept Story
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => setShowRejectModal(true)}
+                                                className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive"
+                                            >
+                                                Reject Story
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardFooter>
                         </Card>
                     </div>
                 )}

@@ -284,10 +284,10 @@ export default function DNDPage() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="overflow-x-auto">
+                                            <div className="">
                                                 <div className="flex space-x-4 overflow-x-auto pb-4 pr-4">
                                                     {sprint.sprintParts && sprint.sprintParts.map((part) => (
-                                                        <div key={part} className="min-w-[16rem]">
+                                                        <div key={part} className="min-w-[30rem]">
                                                             <BacklogTable
                                                                 droppableId={`${sprint._id}-${part}`}
                                                                 title={part}

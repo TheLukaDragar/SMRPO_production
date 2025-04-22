@@ -252,14 +252,39 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
      */
     const handleTaskCompletion = async () => {
         try {
+            // Check if there are still hours to go
+            if (task.timeEstimate > 0) {
+                if (!confirm("Are you sure you want to complete this task? There are still hours remaining. Setting Hours To Go to 0.")) {
+                    return;
+                }
+            }
+
             const updatedTask = {
                 ...task,
-                IsCompleted: !task.IsCompleted
+                IsCompleted: !task.IsCompleted,
+                timeEstimate: 0 // Set Hours To Go to 0 when completing
             };
+
+            // Add a final time log entry if needed
+            if (task.timeEstimate > 0) {
+                const newLogEntry = {
+                    timeLogged: task.timeLogged,
+                    timeEstimate: 0,
+                    logDate: new Date().toISOString().split('T')[0],
+                    loggedBy: user?._id || ''
+                };
+
+                updatedTask.timeLogHistory = [
+                    ...(task.timeLogHistory || []),
+                    newLogEntry
+                ];
+            }
+
             await updateTask(updatedTask);
             onTaskUpdated(updatedTask);
         } catch (error) {
             console.error("Error updating task:", error);
+            alert("Failed to complete task. Please try again.");
         }
     };
 
@@ -349,10 +374,6 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                             ? new Date(task.dueDate).toLocaleDateString()
                             : "Not set"}
                     </div>
-                    <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        {task.timeLogged || 0} / {task.timeEstimate}h logged
-                    </div>
                 </div>
 
                 {/* Last log date display if available */}
@@ -362,150 +383,137 @@ export function TaskCard({ task, isScrumMaster, onTaskUpdated, onTaskDeleted }: 
                     </div>
                 )}
 
-                {/* Active timer display */}
-                {isTracking && (
-                    <div className="mt-3 py-2 px-3 bg-blue-50 border border-blue-100 rounded-md flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-blue-500 animate-pulse" />
-                        <span className="text-blue-700 font-medium">
-                            Time tracking: {formatElapsedTime(elapsedTime)}
-                        </span>
-                    </div>
-                )}
+                {task.AssignedTo &&
+                    task.AssignedTo._id === user?._id &&
+                    task.isAccepted &&
+                    !task.IsCompleted && (
+                        <div className="mt-4 border-t pt-4">
+                            <div className="text-sm font-medium text-gray-700 mb-2">Time Logging</div>
+                            
+                            {/* Time tracking status and timer */}
+                            <div className="flex flex-col gap-2 mb-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <Clock className="h-4 w-4" />
+                                        <span>{task.timeLogged || 0} / {task.timeEstimate || 0}h logged</span>
+                                    </div>
+                                    {!isTracking ? (
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={startTimeTracking}
+                                            className="bg-blue-100 text-blue-800 hover:bg-blue-200 flex items-center gap-1"
+                                        >
+                                            <Play className="h-4 w-4" />
+                                            Start Timer
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={stopTimeTracking}
+                                            className="bg-red-100 text-red-800 hover:bg-red-200 flex items-center gap-1"
+                                        >
+                                            <StopCircle className="h-4 w-4" />
+                                            Stop Timer ({formatElapsedTime(elapsedTime)})
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
 
-                {(task.isAccepted || task.IsCompleted) && (
-                    <div className="flex gap-2 mt-3">
-                        {task.isAccepted && !task.IsCompleted && (
-                            <Badge
-                                variant="secondary"
-                                className="bg-blue-100 text-blue-800 hover:bg-blue-100"
-                            >
-                                In Progress
-                            </Badge>
-                        )}
-                        {task.IsCompleted && (
-                            <Badge
-                                variant="secondary"
-                                className="bg-green-100 text-green-800 hover:bg-green-100"
-                            >
-                                Completed
-                            </Badge>
-                        )}
-                    </div>
-                )}
+                            {/* Manual time logging section */}
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">Hours Done</label>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            value={manualDone}
+                                            onChange={(e) => setManualDone(e.target.value)}
+                                            className="w-full"
+                                            placeholder="0.0"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">Hours To Go</label>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            value={manualToGo}
+                                            onChange={(e) => setManualToGo(e.target.value)}
+                                            className="w-full"
+                                            placeholder="0.0"
+                                        />
+                                    </div>
+                                </div>
 
-{task.AssignedTo &&
-    task.AssignedTo._id === user?._id &&
-    task.isAccepted &&
-    !task.IsCompleted && (
-        <div>
-            {/* Timer controls */}
-            <div className="flex items-center gap-3">
-                {!isTracking ? (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={startTimeTracking}
-                        className="bg-blue-100 text-blue-800 hover:bg-blue-200 flex items-center gap-1"
-                    >
-                        <Play className="h-4 w-4" />
-                        Start Timer
-                    </Button>
-                ) : (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={stopTimeTracking}
-                        className="bg-red-100 text-red-800 hover:bg-red-200 flex items-center gap-1"
-                    >
-                        <StopCircle className="h-4 w-4" />
-                        Stop Timer
-                    </Button>
-                )}
-            </div>
-            
-            {/* Manual logging spinboxes */}
-            <div className="mt-2 flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="flex flex-col">
-                        <label className="text-xs text-gray-500">Hours Done</label>
-                        <Input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={manualDone}
-                            onChange={(e) => setManualDone(e.target.value)}
-                            className="w-16"
-                        />
-                    </div>
-                    <div className="flex flex-col">
-                        <label className="text-xs text-gray-500">Hours To Go</label>
-                        <Input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={manualToGo}
-                            onChange={(e) => setManualToGo(e.target.value)}
-                            className="w-16"
-                        />
-                    </div>
-                </div>
-                
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-500">Log Date</label>
-                    <Input
-                        type="date"
-                        value={logDate}
-                        onChange={(e) => setLogDate(e.target.value)}
-                        className="w-full"
-                    />
-                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 mb-1 block">Log Date</label>
+                                    <Input
+                                        type="date"
+                                        value={logDate}
+                                        onChange={(e) => setLogDate(e.target.value)}
+                                        className="w-full"
+                                    />
+                                </div>
 
-                {/* Log button in another line */}
-                <div className="mt-2">
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleManualTimeLog}
-                        className="bg-blue-100 text-blue-800 hover:bg-blue-200"
-                    >
-                        Log
-                    </Button>
-                </div>
-            </div>
-        </div>
-    )}
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={handleManualTimeLog}
+                                    className="w-full bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                >
+                                    Log Time
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
                 {/* Time log history display */}
                 {task.timeLogHistory && task.timeLogHistory.length > 0 && (
-                    <div className="mt-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowLogHistory(!showLogHistory)}
-                            className="flex items-center gap-1"
-                        >
-                            <History className="h-4 w-4" />
-                            {showLogHistory ? "Hide Log History" : "Show Log History"}
-                            {showLogHistory ? (
-                                <ChevronUp className="h-4 w-4" />
-                            ) : (
-                                <ChevronDown className="h-4 w-4" />
-                            )}
-                        </Button>
-                        {showLogHistory && (
-                            <div className="mt-2 border-t border-gray-200 pt-2">
-                                {task.timeLogHistory.map((log, index) => (
-                                    <div
-                                        key={index}
-                                        className="flex justify-between text-xs text-gray-600"
-                                    >
-                                        <div>{log.logDate}</div>
-                                        <div>{log.timeLogged}h logged</div>
-                                        <div>{log.timeEstimate}h estimated</div>
-                                    </div>
-                                ))}
+                    <div className="mt-4 border-t pt-4">
+                        <div className="h-6 text-sm text-gray-600 mb-2">
+                            Last logged: {new Date(task.timeLogHistory[task.timeLogHistory.length - 1].logDate).toLocaleDateString()}
+                        </div>
+                        <div className="space-y-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowLogHistory(!showLogHistory)}
+                                className="flex items-center justify-between w-full text-gray-700 hover:bg-gray-50/80 transition-colors duration-200"
+                            >
+                                <div className="flex items-center gap-1.5">
+                                    <History className="h-4 w-4" />
+                                    <span className="text-sm">Time Log History</span>
+                                </div>
+                                <div className={`transform transition-transform duration-200 ${showLogHistory ? 'rotate-180' : ''}`}>
+                                    <ChevronDown className="h-4 w-4" />
+                                </div>
+                            </Button>
+                            <div className={`overflow-hidden transition-all duration-200 ease-in-out ${showLogHistory ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <div className="space-y-1 py-2">
+                                    {task.timeLogHistory.slice().reverse().map((log, index) => {
+                                        const date = new Date(log.logDate);
+                                        const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                        return (
+                                            <div
+                                                key={index}
+                                                className="flex items-center justify-between text-sm text-gray-600 py-1.5 px-2 hover:bg-gray-50 rounded-sm"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-gray-500">{formattedDate}</span>
+                                                    <span>{log.timeLogged}h logged</span>
+                                                </div>
+                                                <span className="text-gray-500">{log.timeEstimate}h remaining</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 )}
 
