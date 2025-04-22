@@ -47,10 +47,20 @@ export async function updateStory(story: UserStory) {
         { $set: storyToUpdate }
     );
 
-    return {
-        acknowledged: result.acknowledged,
-        modifiedCount: result.modifiedCount,
-    };
+    if (result.acknowledged && result.modifiedCount > 0) {
+        // Fetch the updated document
+        const updatedStory = await db().collection('userStory').findOne({ _id: objectId });
+        return JSON.parse(JSON.stringify(updatedStory)); // Return the updated story
+    } else if (result.acknowledged && result.modifiedCount === 0) {
+        // If nothing was modified, return the original story data passed in
+        // Or fetch it again if you prefer, to ensure consistency
+        const currentStory = await db().collection('userStory').findOne({ _id: objectId });
+        return JSON.parse(JSON.stringify(currentStory));
+    }
+
+    // Handle cases where the update wasn't acknowledged or failed
+    console.error("Update story failed or was not acknowledged for ID:", _id);
+    return null; // Indicate failure or return an appropriate error/status
 }
 
 //TODO: TO JE ZACASNO

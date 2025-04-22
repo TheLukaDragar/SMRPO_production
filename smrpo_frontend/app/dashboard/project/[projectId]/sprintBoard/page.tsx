@@ -173,6 +173,10 @@ export default function DNDPage() {
         setSelectedStory(null);
     };
 
+    const handleAddNewStoryToBacklog = (newStory: UserStory) => {
+        setStories(prevStories => [...prevStories, newStory]);
+    };
+
     const handleAddSprint = async (startDate: Date, endDate: Date, velocity: number, name: string) => {
         try {
             const oldSprintIndex = columns.findIndex(col => col.isActive);
@@ -233,7 +237,6 @@ export default function DNDPage() {
                         {/* Content when data is loaded */}
                         {/* Product Backlog Section */}
                         <div className="mb-8">
-                            <h2 className="text-xl font-semibold mb-4">Product Backlog</h2>
                             <div className="flex justify-end items-center mb-1">
                                 <button
                                     type="button"
@@ -257,15 +260,17 @@ export default function DNDPage() {
                                 projectUsers={projectUsers}
                                 setItems={setStories}
                                 userRole={userRole || undefined}
+                                projectId={projectId}
+                                onStoryAdded={handleAddNewStoryToBacklog}
                             />
                         </div>
                         {/* Sprint Boards Section */}
                         <div className="mt-10">
                             <h2 className="text-xl font-semibold mb-4">Sprint Boards</h2>
                             {columns.length > 0 ? (
-                                <div className="flex space-x-8 overflow-x-auto pb-6">
+                                <div>
                                     {columns.map((sprint) => (
-                                        <div key={sprint._id} className="flex-none min-w-max">
+                                        <div key={sprint._id} className="mb-8">
                                             <div className="mb-4 bg-white p-3 rounded-lg shadow-sm">
                                                 <h3 className="font-bold text-lg">{sprint.sprintName}</h3>
                                                 {sprint.startDate && sprint.endDate && (
@@ -279,25 +284,39 @@ export default function DNDPage() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="flex space-x-6 overflow-x-auto">
-                                                {sprint.sprintParts && sprint.sprintParts.map((part) => (
-                                                    <BacklogTable
-                                                        droppableId={`${sprint._id}-${part}`}
-                                                        key={part}
-                                                        title={part}
-                                                        items={stories.filter(story => story.SprintPosition === part && story.sprintID === sprint._id)}
-                                                        projectUsers={projectUsers}
-                                                        setItems={setStories}
-                                                        userRole={userRole || ""}
-                                                    />
-                                                ))}
+                                            <div className="overflow-x-auto">
+                                                <div className="flex space-x-4 overflow-x-auto pb-4 pr-4">
+                                                    {sprint.sprintParts && sprint.sprintParts.map((part) => (
+                                                        <div key={part} className="min-w-[16rem]">
+                                                            <BacklogTable
+                                                                droppableId={`${sprint._id}-${part}`}
+                                                                title={part}
+                                                                items={stories.filter(story => story.SprintPosition === part && story.sprintID === sprint._id)}
+                                                                projectUsers={projectUsers}
+                                                                setItems={setStories}
+                                                                userRole={userRole || ""}
+                                                                projectId={projectId}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
                                 <div className="bg-white p-8 rounded-lg text-center">
-                                    <p className="text-gray-600">No active sprints found. {(userRole === 'SCRUM_MASTER' || userRole === 'SCRUM_DEV') ? 'Add a sprint to get started.' : 'Contact your Scrum Master to create a sprint.'}</p>
+                                    <p className="text-gray-600">
+                                        No active sprints found. {userRole === 'SCRUM_MASTER' || userRole === 'SCRUM_DEV' ? (
+                                            <button
+                                                onClick={() => setIsSprintModalOpen(true)}
+                                                className="text-blue-600 hover:underline bg-transparent border-none p-0 m-0 cursor-pointer font-semibold"
+                                                style={{ background: 'none' }}
+                                            >
+                                                + Create sprint
+                                            </button>
+                                        ) : 'Contact your Scrum Master to create a sprint.'}
+                                    </p>
                                 </div>
                             )}
                         </div>

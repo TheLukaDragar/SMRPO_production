@@ -16,8 +16,10 @@ interface StoryTableProps {
     projectUsers: User[];
     setItems: React.Dispatch<React.SetStateAction<UserStory[]>>;
     userRole: string | undefined;
+    projectId: string;
+    onStoryAdded?: (newStory: UserStory) => void;
 }
-const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, projectUsers, setItems, userRole }) => {
+const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, projectUsers, setItems, userRole, projectId, onStoryAdded }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [error, setError] = useState("");
@@ -72,6 +74,9 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
         if (!newUserStory.dueDate) {
             validationErrors.push("Due date is required");
         }
+        if (!projectId) {
+            validationErrors.push("Project ID is missing");
+        }
 
         if (validationErrors.length > 0) {
             setError(validationErrors.join(", "));
@@ -81,7 +86,8 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
 
         const updatedUserStory = {
             ...newUserStory,
-            createdAt: new Date()
+            createdAt: new Date(),
+            projectId: projectId
         };
 
         try {
@@ -89,11 +95,29 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
 
             const updatedUserStoryId = {
                 _id: newStoryId.insertedId,
-                ...newUserStory
+                ...updatedUserStory
             };
 
-            setItems([...items, updatedUserStoryId as UserStory]);
+            if (onStoryAdded) {
+                onStoryAdded(updatedUserStoryId as UserStory);
+            } else {
+                setItems(prevItems => [...prevItems, updatedUserStoryId as UserStory]);
+            }
             setIsModalOpen(false);
+            // Reset form fields
+            setNewUserStory({
+                title: "",
+                description: "",
+                owner: {} as User, // Reset owner
+                priority: "",
+                storyPoints: 0,
+                dueDate: new Date(),
+                sprintID: droppableId.split("-")[0], // Keep initial logic if needed
+                SprintPosition: droppableId.split("-")[1], // Keep initial logic if needed
+                createdAt: new Date(),
+                // Ensure projectId is not reset if it should persist, but it's part of the initial state structure
+                // projectId: projectId // If projectId should be kept from props, it's added later anyway
+            });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred while adding the story');
         } finally {
@@ -106,7 +130,7 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md w-full flex-shrink-0">
+        <div className="bg-white rounded-lg shadow-md w-full min-w-[16rem] h-full flex flex-col">
             <div className="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                 <h2 className="font-bold text-lg text-gray-700">{title}</h2>
                 <div className="text-sm text-gray-500 mt-1">{items.length} stories</div>
@@ -117,7 +141,7 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
                     <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className="p-3 min-h-64 max-h-screen overflow-y-auto"
+                        className="p-3 min-h-64 max-h-screen overflow-y-auto flex-grow"
                     >
                         {items.map((story_data, index) => (
                             <UserStoryCard

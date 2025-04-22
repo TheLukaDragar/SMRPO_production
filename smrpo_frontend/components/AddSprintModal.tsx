@@ -148,7 +148,7 @@ const AddSprintModal: React.FC<AddSprintModalProps> = ({ isOpen, onClose, onAdd,
                             onChange={(e) => setVelocity(e.target.value)}
                             className="w-full p-2 border rounded"
                             min="0.1"
-                            step="0.1"
+                            step="1"
                             required
                         />
                     </div>
