@@ -308,7 +308,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Story Points {isProductOwner ? "(Waiting for estimate)" : ""}</label>
+                                    <label className="block text-sm font-medium text-gray-700">Story Points {isProductOwner ? "(Set by dev team)" : ""}</label>
                                     <input
                                         type="number"
                                         name="storyPoints"
