@@ -87,7 +87,7 @@ const ProductBacklog: React.FC = () => {
                 variant: "destructive",
             });
         }
-    }, [stories, canEditDeleteStory]);
+    }, [stories, canEditDeleteStory, toast]);
 
     // Function to handle story update
     const handleUpdateStory = useCallback(async (updatedStory: UserStory) => {
@@ -141,7 +141,7 @@ const ProductBacklog: React.FC = () => {
                 variant: "destructive",
             });
         }
-    }, [stories, canEditDeleteStory, checkDuplicateTitle]);
+    }, [stories, canEditDeleteStory, checkDuplicateTitle, toast]);
 
     const fetchUserData = useCallback(async (users: string[]) => {
         try {
@@ -186,7 +186,7 @@ const ProductBacklog: React.FC = () => {
         } catch (error) {
             console.error("Error fetching stories:", error);
         }
-    }, []);
+    }, [projectId]);
 
     const fetchSprints = useCallback(async () => {
         try {

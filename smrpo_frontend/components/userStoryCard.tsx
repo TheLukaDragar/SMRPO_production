@@ -452,7 +452,7 @@ const UserStoryCard: React.FC<UserStoryCardProps> = ({ ID, draggableId, index, s
                                         <SelectContent>
                                             <SelectItem value="Must have" className="text-destructive">Must Have</SelectItem>
                                             <SelectItem value="Should Have" className="text-yellow-600">Should Have</SelectItem>
-                                            <SelectItem value="Wont Have" className="text-gray-600">Won't Have</SelectItem>
+                                            <SelectItem value="Wont Have" className="text-gray-600">Won&apos;t Have</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
