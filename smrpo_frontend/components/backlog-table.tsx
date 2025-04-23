@@ -27,6 +27,8 @@ const BacklogTable: React.FC<StoryTableProps> = ({ droppableId, title, items, pr
     const { toast } = useToast();
     console.log("BacklogTable userRole", userRole);
 
+    console.log("abc", items);
+
     const [newUserStory, setNewUserStory] = useState({
         title: "",
         description: "",

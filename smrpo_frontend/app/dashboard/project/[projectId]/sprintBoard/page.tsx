@@ -256,7 +256,7 @@ export default function DNDPage() {
                                 droppableId={`${projectId}-backlog`}
                                 key={`${projectId}-backlog`}
                                 title={"Sprint Backlog"}
-                                items={stories.filter(story => (story.SprintPosition === "backlog" || story.SprintPosition ===  "To Do") && story.projectId === projectId && story.sprintID == currentSprint?._id && (showHidden || story.priority !== "Wont Have"))}
+                                items={stories.filter(story => (story.SprintPosition == "backlog" || story.SprintPosition == "To Do") && story.projectId === projectId && story.sprintID == currentSprint?._id && (showHidden || story.priority !== "Wont Have"))}
                                 projectUsers={projectUsers}
                                 setItems={setStories}
                                 userRole={userRole || undefined}
