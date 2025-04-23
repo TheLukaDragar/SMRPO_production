@@ -6,41 +6,43 @@ import { sprint } from "@/lib/types/sprint-types";
 import SimpleBacklogTable from "@/components/simpleBacklogTable";
 import {useUser} from "@/lib/hooks/useUser";
 import {useParams} from "next/navigation";
-import {getAllSprints, getAllUserStories, deleteStory, updateStory} from "@/lib/actions/user-story-actions";
+import {getAllUserStories, deleteStory, updateStory, getAllSprints} from "@/lib/actions/user-story-actions";
 import {getProjectMembers} from "@/lib/actions/project-actions";
 import {getUsersByIds} from "@/lib/actions/user-actions";
 import { useToast } from "@/components/ui/use-toast"
 
-const ProductBacklog: React.FC = () => {
+const SprintBacklog: React.FC = () => {
     const [stories, setStories] = useState<UserStory[]>([]);
-    const [allSprints, setAllSprints] = useState<sprint[]>([]);
+    const [activeSprint, setActiveSprint] = useState<sprint | null>(null);
     const [projectUsers, setProjectUsers] = useState<User[]>([]);
     const [userRole, setUserRole] = useState<string | null>(null);
     const params = useParams();
-    const [expandedCategory, setExpandedCategory] = useState<string | null>("unrealized-unassigned");
+    const [expandedCategory, setExpandedCategory] = useState<string | null>("active");
     const { toast } = useToast();
 
     const projectId = params.projectId as string;
     const { user } = useUser();
 
     const canEditDeleteStory = useCallback((story: UserStory): boolean => {
-        const role = (userRole === "Product Owner" || userRole === "Scrum Master" || userRole === "SCRUM_DEV")
+        const isScrumMaster = userRole === "Scrum Master";
+        const isProductOwner = userRole === "Product Owner";
+        const isDeveloper = userRole === "SCRUM_DEV";
+        const isStoryOwner = user && story.owner?._id === user._id;
 
-        // Can only edit/delete stories that are not realized
-        if (story.SprintPosition === "Done") {
-            return false;
-        }
+        // Scrum Master can edit/delete any story
+        if (isScrumMaster) return true;
 
-        // Can only edit/delete stories that are not assigned to any Sprint
-        const hasNoSprint = !story.sprintID || story.sprintID === "";
-        const isInInactiveSprint = story.sprintID && story.sprintID !== "" && !allSprints.some(sprint =>
-            sprint._id === story.sprintID &&
-            sprint.isActive &&
-            sprint.projectId === projectId
-        );
+        // Product Owner can edit/delete unassigned stories
+        if (isProductOwner && (!story.owner || !story.owner._id)) return true;
 
-        return Boolean(hasNoSprint || isInInactiveSprint || role);
-    }, [userRole, allSprints, projectId]);
+        // Story owner can edit their own stories if not completed
+        if (isStoryOwner && story.SprintPosition !== "Done") return true;
+
+        // Developers can edit unassigned stories
+        if (isDeveloper && (!story.owner || !story.owner._id)) return true;
+
+        return false;
+    }, [userRole, user]);
 
     // Function to check for duplicate story title
     const checkDuplicateTitle = useCallback((title: string, storyId: string) => {
@@ -87,7 +89,7 @@ const ProductBacklog: React.FC = () => {
                 variant: "destructive",
             });
         }
-    }, [stories, canEditDeleteStory]);
+    }, [stories, canEditDeleteStory, toast]);
 
     // Function to handle story update
     const handleUpdateStory = useCallback(async (updatedStory: UserStory) => {
@@ -141,7 +143,7 @@ const ProductBacklog: React.FC = () => {
                 variant: "destructive",
             });
         }
-    }, [stories, canEditDeleteStory, checkDuplicateTitle]);
+    }, [stories, canEditDeleteStory, checkDuplicateTitle, toast]);
 
     const fetchUserData = useCallback(async (users: string[]) => {
         try {
@@ -181,56 +183,55 @@ const ProductBacklog: React.FC = () => {
 
     const fetchStories = useCallback(async () => {
         try {
+            if (!activeSprint) return;
+
+            // Get all user stories
             const storiesData = await getAllUserStories();
-            setStories(storiesData.filter((story: UserStory) => story.projectId === projectId));
+
+            // Filter for stories in the active sprint
+            const sprintStories = storiesData.filter((story: UserStory) =>
+                story.sprintID === activeSprint._id &&
+                story.projectId === projectId
+            );
+
+            setStories(sprintStories);
         } catch (error) {
             console.error("Error fetching stories:", error);
         }
-    }, []);
+    }, [activeSprint, projectId]);
 
-    const fetchSprints = useCallback(async () => {
+    const fetchActiveSprint = useCallback(async () => {
         try {
+            if (!projectId) return;
             const sprints = await getAllSprints();
-            const projectSprints = sprints.filter(
-                (sprint: sprint) => sprint.projectId === projectId
+            const activeSprints = sprints.filter(
+                (sprint: sprint) => sprint.isActive && sprint.projectId === projectId
             );
-            setAllSprints(projectSprints);
+
+            const sprint = activeSprints[0];
+            setActiveSprint(sprint);
         } catch (error) {
-            console.error("Error fetching sprints:", error);
+            console.error("Error fetching active sprint:", error);
         }
     }, [projectId]);
 
     useEffect(() => {
         if (!projectId) return;
-        fetchStories();
-        fetchSprints();
+        fetchActiveSprint();
         fetchProjectUsers();
-    }, [projectId, fetchProjectUsers, fetchSprints, fetchStories]);
+    }, [projectId, fetchActiveSprint, fetchProjectUsers]);
 
-    const realizedStories = stories.filter(story =>
-        story.SprintPosition === "Done"
-    );
+    useEffect(() => {
+        if (activeSprint) {
+            fetchStories();
+        }
+    }, [activeSprint, fetchStories]);
 
-    const unrealizedAssignedStories = stories.filter(story => {
-        const hasValidSprintID = story.sprintID && story.sprintID !== "";
-        const isInActiveSprint = hasValidSprintID && allSprints.some(sprint =>
-            sprint._id === story.sprintID &&
-            sprint.isActive &&
-            sprint.projectId === projectId
-        );
-        return isInActiveSprint && story.SprintPosition !== "Done";
-    });
-
-    const unrealizedUnassignedStories = stories.filter(story => {
-        const hasNoSprint = !story.sprintID || story.sprintID === "";
-        const isInInactiveSprint = story.sprintID && story.sprintID !== "" && !allSprints.some(sprint =>
-            sprint._id === story.sprintID &&
-            sprint.isActive &&
-            sprint.projectId === projectId
-        );
-
-        return (hasNoSprint || isInInactiveSprint) && story.SprintPosition !== "Done";
-    });
+    // Filter stories based on their SprintPosition/status
+    const activeStories = stories.filter(story => story.SprintPosition === "Development" || story.SprintPosition === "Testing");
+    const assignedStories = stories.filter(story => story.owner !== null && story.SprintPosition === "backlog" );
+    const unassignedStories = stories.filter(story => story.owner === null);
+    const completedStories = stories.filter(story => story.SprintPosition === "Done");
 
     const toggleCategory = (category: string) => {
         if (expandedCategory === category) {
@@ -240,42 +241,79 @@ const ProductBacklog: React.FC = () => {
         }
     };
 
+    if (!activeSprint) {
+        return (
+            <div className="p-4 bg-gray-50 rounded-lg shadow">
+                <p className="text-center text-gray-600">Ni aktivnega sprinta za ta projekt.</p>
+            </div>
+        );
+    }
+
     return (
         <div>
             <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">Seznam zahtev (Product Backlog)</h1>
+                <h1 className="text-2xl font-bold text-gray-800 mb-6">Seznam nalog (Sprint Backlog)</h1>
+
+                {/* Sprint info */}
+                {activeSprint && (
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h2 className="text-lg font-semibold text-blue-700 mb-2">
+                            Aktivni sprint: {activeSprint.sprintName}
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <p className="text-sm text-blue-800">
+                                    <span className="font-medium">Začetek:</span>{" "}
+                                    {activeSprint.startDate ? new Date(activeSprint.startDate).toLocaleDateString('sl-SI') : 'Ni datuma'}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-blue-800">
+                                    <span className="font-medium">Konec:</span>{" "}
+                                    {activeSprint.endDate ? new Date(activeSprint.endDate).toLocaleDateString('sl-SI') : 'Ni datuma'}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-blue-800">
+                                    <span className="font-medium">Skupno število točk:</span> {activeSprint.velocity || '0'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Permission info box */}
-                {(userRole === "Product Owner" || userRole === "Scrum Master") && (
+                {(userRole === "Scrum Master" || userRole === "Product Owner") && (
                     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p className="text-sm text-blue-800">
-                            <span className="font-semibold">Opomba:</span> Produktni vodja in skrbnik metodologije lahko urejata in brišeta
-                            tiste uporabniške zgodbe v projektu, ki še niso realizirane in niso dodeljene nobenemu Sprintu.
+                            <span className="font-semibold">Opomba:</span> Skrbnik metodologije lahko ureja vse zgodbe.
+                            Produktni vodja lahko ureja nedodeljene zgodbe. Razvijalci lahko urejajo svoje zgodbe in nedodeljene zgodbe.
                         </p>
                     </div>
                 )}
 
+                {/* Active stories */}
                 <div className="mb-4">
                     <div
-                        className="bg-green-50 p-3 rounded-lg border border-green-200 cursor-pointer flex justify-between items-center"
-                        onClick={() => toggleCategory("realized")}
+                        className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 cursor-pointer flex justify-between items-center"
+                        onClick={() => toggleCategory("active")}
                     >
-                        <h2 className="text-lg font-medium text-green-700">
-                            Realizirane zgodbe ({realizedStories.length})
+                        <h2 className="text-lg font-medium text-yellow-700">
+                            Aktivne naloge ({activeStories.length})
                         </h2>
-                        <span className="text-green-700">{expandedCategory === "realized" ? "▼" : "►"}</span>
+                        <span className="text-yellow-700">{expandedCategory === "active" ? "▼" : "►"}</span>
                     </div>
 
-                    {expandedCategory === "realized" && (
+                    {expandedCategory === "active" && (
                         <div className="mt-2">
                             <SimpleBacklogTable
-                                title="Realizirane zgodbe"
-                                items={realizedStories}
+                                title="Aktivne naloge"
+                                items={activeStories}
                                 projectUsers={projectUsers}
                                 setItems={setStories}
                                 userRole={userRole || ""}
                                 projectId={projectId}
-                                category="realized"
+                                category="active"
                                 onDeleteStory={handleDeleteStory}
                                 onUpdateStory={handleUpdateStory}
                                 canEditDeleteStory={canEditDeleteStory}
@@ -284,27 +322,28 @@ const ProductBacklog: React.FC = () => {
                     )}
                 </div>
 
+                {/* Assigned stories */}
                 <div className="mb-4">
                     <div
                         className="bg-blue-50 p-3 rounded-lg border border-blue-200 cursor-pointer flex justify-between items-center"
-                        onClick={() => toggleCategory("unrealized-assigned")}
+                        onClick={() => toggleCategory("assigned")}
                     >
                         <h2 className="text-lg font-medium text-blue-700">
-                            Nerealizirane zgodbe - dodeljene ({unrealizedAssignedStories.length})
+                            Dodeljene naloge ({assignedStories.length})
                         </h2>
-                        <span className="text-blue-700">{expandedCategory === "unrealized-assigned" ? "▼" : "►"}</span>
+                        <span className="text-blue-700">{expandedCategory === "assigned" ? "▼" : "►"}</span>
                     </div>
 
-                    {expandedCategory === "unrealized-assigned" && (
+                    {expandedCategory === "assigned" && (
                         <div className="mt-2">
                             <SimpleBacklogTable
-                                title="Nerealizirane zgodbe - dodeljene"
-                                items={unrealizedAssignedStories}
+                                title="Dodeljene naloge"
+                                items={assignedStories}
                                 projectUsers={projectUsers}
                                 setItems={setStories}
                                 userRole={userRole || ""}
                                 projectId={projectId}
-                                category="unrealized-assigned"
+                                category="assigned"
                                 onDeleteStory={handleDeleteStory}
                                 onUpdateStory={handleUpdateStory}
                                 canEditDeleteStory={canEditDeleteStory}
@@ -313,28 +352,58 @@ const ProductBacklog: React.FC = () => {
                     )}
                 </div>
 
+                {/* Unassigned stories */}
                 <div className="mb-4">
                     <div
                         className="bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer flex justify-between items-center"
-                        onClick={() => toggleCategory("unrealized-unassigned")}
+                        onClick={() => toggleCategory("unassigned")}
                     >
                         <h2 className="text-lg font-medium text-gray-700">
-                            Nerealizirane zgodbe - nedodeljene ({unrealizedUnassignedStories.length})
+                            Nedodeljene naloge ({unassignedStories.length})
                         </h2>
-                        <span className="text-gray-700">{expandedCategory === "unrealized-unassigned" ? "▼" : "►"}</span>
+                        <span className="text-gray-700">{expandedCategory === "unassigned" ? "▼" : "►"}</span>
                     </div>
 
-                    {expandedCategory === "unrealized-unassigned" && (
+                    {expandedCategory === "unassigned" && (
                         <div className="mt-2">
                             <SimpleBacklogTable
-                                sprints={allSprints}
-                                title="Nerealizirane zgodbe - nedodeljene"
-                                items={unrealizedUnassignedStories}
+                                title="Nedodeljene naloge"
+                                items={unassignedStories}
                                 projectUsers={projectUsers}
                                 setItems={setStories}
                                 userRole={userRole || ""}
                                 projectId={projectId}
-                                category="unrealized-unassigned"
+                                category="unassigned"
+                                onDeleteStory={handleDeleteStory}
+                                onUpdateStory={handleUpdateStory}
+                                canEditDeleteStory={canEditDeleteStory}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {/* Completed stories */}
+                <div className="mb-4">
+                    <div
+                        className="bg-green-50 p-3 rounded-lg border border-green-200 cursor-pointer flex justify-between items-center"
+                        onClick={() => toggleCategory("completed")}
+                    >
+                        <h2 className="text-lg font-medium text-green-700">
+                            Zaključene naloge ({completedStories.length})
+                        </h2>
+                        <span className="text-green-700">{expandedCategory === "completed" ? "▼" : "►"}</span>
+                    </div>
+
+                    {expandedCategory === "completed" && (
+                        <div className="mt-2">
+                            <SimpleBacklogTable
+                                title="Zaključene naloge"
+                                items={completedStories}
+                                projectUsers={projectUsers}
+                                setItems={setStories}
+                                userRole={userRole || ""}
+                                projectId={projectId}
+                                category="completed"
                                 onDeleteStory={handleDeleteStory}
                                 onUpdateStory={handleUpdateStory}
                                 canEditDeleteStory={canEditDeleteStory}
@@ -347,4 +416,4 @@ const ProductBacklog: React.FC = () => {
     );
 };
 
-export default ProductBacklog;
+export default SprintBacklog;

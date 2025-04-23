@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { UserStory } from "@/lib/types/user-story-types";
 import { User } from "@/lib/types/user-types";
 import { addStory } from "@/lib/actions/user-story-actions";
@@ -16,6 +16,7 @@ interface StoryTableProps {
     onDeleteStory: (storyId: string) => void;
     onUpdateStory: (updatedStory: UserStory) => void;
     canEditDeleteStory: (story: UserStory) => boolean;
+    sprints?: Array<{ _id: string, sprintName: string }>;
 }
 
 const SimpleBacklogTable: React.FC<StoryTableProps> = ({
@@ -28,7 +29,8 @@ const SimpleBacklogTable: React.FC<StoryTableProps> = ({
                                                            category,
                                                            onDeleteStory,
                                                            onUpdateStory,
-                                                           canEditDeleteStory
+                                                           canEditDeleteStory,
+                                                           sprints = []
                                                        }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -140,6 +142,13 @@ const SimpleBacklogTable: React.FC<StoryTableProps> = ({
         }
 
         try {
+            // If a sprint is assigned, update the SprintPosition to "To Do"
+            if (currentStory.sprintID) {
+                currentStory.SprintPosition = "To Do";
+            } else {
+                currentStory.SprintPosition = "backlog";
+            }
+
             await onUpdateStory(currentStory);
             setIsEditModalOpen(false);
         } catch (err) {
@@ -255,6 +264,15 @@ const SimpleBacklogTable: React.FC<StoryTableProps> = ({
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                             {story.storyPoints} points
+                                        </div>
+                                    )}
+                                    {/* Display sprint info if assigned */}
+                                    {story.sprintID && (
+                                        <div className="flex items-center">
+                                            <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                            </svg>
+                                            {sprints.find(s => s._id === story.sprintID)?.sprintName || "Sprint"}
                                         </div>
                                     )}
                                 </div>
@@ -491,6 +509,30 @@ const SimpleBacklogTable: React.FC<StoryTableProps> = ({
                                         className={`mt-1 block w-full border ${!currentStory.dueDate && error ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                                         required
                                     />
+                                </div>
+
+                                {/* Add Sprint Assignment (only in edit modal) */}
+                                <div>
+                                    <label htmlFor="edit-sprintID" className="block text-sm font-medium text-gray-700">
+                                        Assign to Sprint
+                                    </label>
+                                    <select
+                                        id="edit-sprintID"
+                                        name="sprintID"
+                                        value={currentStory.sprintID || ""}
+                                        onChange={handleEditInputChange}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                    >
+                                        <option value="">Not assigned to sprint</option>
+                                        {sprints.map(sprint => (
+                                            <option key={sprint._id} value={sprint._id}>
+                                                {sprint.sprintName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Assigning to a sprint will change the story status to To Do
+                                    </p>
                                 </div>
                             </div>
 

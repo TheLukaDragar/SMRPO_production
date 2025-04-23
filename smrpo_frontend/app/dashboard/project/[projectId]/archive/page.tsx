@@ -15,6 +15,9 @@ import { sprint, sprintNoId } from "@/lib/types/sprint-types";
 import { useProject } from "@/lib/contexts/project-context";
 import { getProjectMembers } from "@/lib/actions/project-actions";
 import { getUsersByIds } from "@/lib/actions/user-actions";
+import BacklogTable from "@/components/backlog-table";
+import {useParams} from "next/navigation";
+import {useUser} from "@/lib/hooks/useUser";
 //import { TimeLoggingPopup } from '@/components/TimeLoggingPopup';
 
 export default function DNDPage() {
@@ -26,6 +29,13 @@ export default function DNDPage() {
     const { activeProject, loading, refreshProjects } = useProject();
     const [selectedStory, setSelectedStory] = useState<UserStory | null>(null);
     const [selectedSprint, setSelectedSprint] = useState<string | null>(null);
+    const params = useParams();
+    const projectId = params.projectId as string;
+    const { user } = useUser();
+
+    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+    const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
+    const [userRole, setUserRole] = useState<string | null>(null);
 
     const fetchUserData = useCallback(async (users: string[]) => {
         try {
@@ -38,51 +48,52 @@ export default function DNDPage() {
             console.error("Error fetching userData:", error);
         } finally {
             setIsRefetching(false);
+            setIsLoadingUsers(false);
         }
     }, []);
 
     const fetchProjectUsers = useCallback(async () => {
         try {
             setIsRefetching(true);
-            const users = await getProjectMembers(activeProject?._id ?? "");
-            console.log('Users JSON:', JSON.stringify(users));
-            const usr_ids = users.map((user: User) => user._id);
+            setIsLoadingUsers(true);
+            setIsUserRoleLoading(true);
+            if (!projectId) {
+                console.log("No project ID");
+                setIsLoadingUsers(false);
+                setIsRefetching(false);
+                setIsUserRoleLoading(false);
+                return;
+            }
+            const users = await getProjectMembers(projectId);
+            if (user && user._id) {
+                console.log("all u;", users)
+                console.log("curr u;", user)
+
+                const currentUserInProject = users.filter((projectUser: any) => projectUser.userId == user._id);
+                if (currentUserInProject && currentUserInProject.length > 0) {
+                    setUserRole(currentUserInProject[0].role);
+                    console.log("Current user role:", currentUserInProject[0].role);
+                } else {
+                    setUserRole(null);
+                    console.log("User not found in project members");
+                }
+            }
+            const usr_ids = users.map((user: any) => user.userId);
             console.log("usr_ids: ", usr_ids);
-            await fetchUserData(usr_ids);
+            if (usr_ids.length > 0) {
+                await fetchUserData(usr_ids);
+            } else {
+                setProjectUsers([]);
+                setIsLoadingUsers(false);
+            }
         } catch (error) {
             console.error("Error fetching project users:", error);
         } finally {
             setIsRefetching(false);
+            setIsUserRoleLoading(false);
         }
-    }, [activeProject, fetchUserData]);
+    }, [projectId, user, fetchUserData]);
 
-    const fetchSprints = useCallback(async () => {
-        try {
-            setIsRefetching(true);
-            const sprints = await getAllSprints();
-            const projSprint = sprints.filter(
-                (sprint: sprint) => sprint.projectId === activeProject?._id
-            );
-            setAllSprints(projSprint);
-            const activeSprints = sprints.filter(
-                (sprint: sprint) => !sprint.isActive && sprint.projectId === activeProject?._id
-            );
-            console.log("all sprints: ", sprints);
-            console.log("active sprints: ", activeSprints);
-            setColumns(activeSprints);
-
-            // Set default selected sprint if none is selected
-            if (activeSprints.length > 0 && !selectedSprint) {
-                setSelectedSprint(activeSprints[0]._id);
-            }
-
-            console.log(sprints);
-        } catch (error) {
-            console.error("Error fetching sprints:", error);
-        } finally {
-            setIsRefetching(false);
-        }
-    }, [activeProject, selectedSprint]);
 
     const fetchStories = useCallback(async () => {
         try {
@@ -99,6 +110,27 @@ export default function DNDPage() {
     useEffect(() => {
         console.log("project users: ", projectUsers);
     }, [projectUsers]);
+
+    const fetchSprints = useCallback(async () => {
+        try {
+            setIsRefetching(true);
+            const sprints = await getAllSprints();
+            const projSprint = sprints.filter(
+                (sprint: sprint) => sprint.projectId === projectId
+            );
+            setAllSprints(projSprint);
+            const activeSprints = sprints.filter(
+                (sprint: sprint) => sprint.projectId === projectId
+            );
+            console.log("activeSprints:", activeSprints);
+            setColumns(activeSprints);
+            console.log(sprints);
+        } catch (error) {
+            console.error("Error fetching sprints:", error);
+        } finally {
+            setIsRefetching(false);
+        }
+    }, [projectId]);
 
     useEffect(() => {
         if (!activeProject?._id) return;
@@ -172,13 +204,15 @@ export default function DNDPage() {
                             <h2 className="mb-4 font-semibold text-lg">{currentSprint.sprintName}</h2>
                             <div className="flex space-x-4 overflow-x-auto">
                                 {currentSprint.sprintParts && currentSprint.sprintParts.map((part) => (
-                                    <StoryTable
-                                        ID={`${currentSprint._id}-${part}`}
+                                    <BacklogTable
+                                        droppableId={`${currentSprint._id}-${part}`}
                                         key={part}
                                         title={part}
                                         items={stories.filter(story => story.SprintPosition === part && story.sprintID === currentSprint._id)}
                                         projectUsers={projectUsers}
                                         setItems={setStories}
+                                        projectId={projectId}
+                                        userRole={userRole || undefined}
                                     />
                                 ))}
                             </div>

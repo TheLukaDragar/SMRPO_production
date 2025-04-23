@@ -146,12 +146,17 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
       {
         name: "Sprint Management",
         url: projectId ? `/dashboard/project/${projectId}/sprintList` : "/dashboard",
+        icon: Settings2,
+      },
+      {
+        name: "Sprint Backlog",
+        url: projectId ? `/dashboard/project/${projectId}/sprintBacklog` : "/dashboard",
         icon: PieChart,
       },
       {
         name: "Archive Board",
         url: projectId ? `/dashboard/project/${projectId}/archive` : "/dashboard",
-        icon: PieChart,
+        icon: BookOpen,
       },
       // {
       //   name: "Roadmap",

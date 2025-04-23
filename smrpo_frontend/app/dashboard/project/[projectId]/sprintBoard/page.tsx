@@ -36,6 +36,7 @@ export default function DNDPage() {
     const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
     const params = useParams();
     const [showHidden, setShowHidden] = useState(false);
+    const [currentSprint, setCurrentSprint] = useState<sprint | null>(null);
 
     const projectId = params.projectId as string;
     const { user } = useUser();
@@ -114,9 +115,8 @@ export default function DNDPage() {
             const activeSprints = sprints.filter(
                 (sprint: sprint) => sprint.isActive && sprint.projectId === projectId
             );
-            console.log("all sprints: ", sprints);
-            console.log("active sprints: ", activeSprints);
-
+            setCurrentSprint(activeSprints[0] || null);
+            console.log("activeSprints:", activeSprints);
             setColumns(activeSprints);
             console.log(sprints);
         } catch (error) {
@@ -255,8 +255,8 @@ export default function DNDPage() {
                             <BacklogTable
                                 droppableId={`${projectId}-backlog`}
                                 key={`${projectId}-backlog`}
-                                title={"Product Backlog"}
-                                items={stories.filter(story => story.SprintPosition === "backlog" && story.sprintID === projectId && (showHidden || story.priority !== "Wont Have"))}
+                                title={"Sprint Backlog"}
+                                items={stories.filter(story => (story.SprintPosition === "backlog" || story.SprintPosition ===  "To Do") && story.projectId === projectId && story.sprintID == currentSprint?._id && (showHidden || story.priority !== "Wont Have"))}
                                 projectUsers={projectUsers}
                                 setItems={setStories}
                                 userRole={userRole || undefined}
