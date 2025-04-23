@@ -100,7 +100,7 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
       //     },
       //   ],
       // },
-      
+
 
 
       {
@@ -115,6 +115,19 @@ const getNavData = (projectId?: string, isAdmin?: boolean) => {
           }
         ],
       },
+      {
+        title: "Documentation",
+        url: "/documentation",
+        icon: BookOpen,
+        isActive: true,
+        items: [
+          {
+            title: "Documentation",
+            url: "/documentation",
+          },
+        ],
+      },
+
       // {
       //   title: "Documentation",
       //   url: "/documentation",
